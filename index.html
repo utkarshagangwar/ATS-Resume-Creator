@@ -1,0 +1,3445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATS Resume Builder - AI Powered</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://unpkg.com/docx@8.2.0/build/index.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .section-card { transition: all 0.3s ease; }
+        .section-card:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+        .generate-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .generate-btn:hover { background: linear-gradient(135deg, #5a67d8 0%, #6b46a1 100%); }
+        .ats-score-ring { transition: stroke-dashoffset 1s ease-in-out; }
+        .tab-active { border-bottom: 3px solid #667eea; color: #667eea; }
+        .resume-preview { font-family: 'Times New Roman', serif; }
+        .loading-spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .bullet-item::before { content: "•"; margin-right: 8px; }
+        .editable:focus { outline: 2px solid #667eea; outline-offset: 2px; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a1a1a1; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-800">ATS Resume Builder</h1>
+                    <p class="text-xs text-gray-500">AI-Powered • ATS-Optimized • Humanized</p>
+                </div>
+            </div>
+            <nav class="flex items-center gap-2">
+                <button onclick="switchTab('editor')" id="tab-editor" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-indigo-600 border-b-3 border-transparent tab-active">Editor</button>
+                <button onclick="switchTab('preview')" id="tab-preview" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-indigo-600 border-b-3 border-transparent">Preview</button>
+                <button onclick="switchTab('ats')" id="tab-ats" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-indigo-600 border-b-3 border-transparent">ATS Score</button>
+                <button onclick="switchTab('settings')" id="tab-settings" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-indigo-600 border-b-3 border-transparent">Settings</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Editor Tab -->
+        <div id="content-editor" class="tab-content">
+            <!-- Action Bar -->
+            <div class="bg-white rounded-xl shadow-sm p-4 mb-6 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <label class="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer transition">
+                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                        </svg>
+                        <span class="text-sm font-medium text-gray-700">Upload Resume</span>
+                        <input type="file" id="resumeUpload" accept=".pdf,.docx" class="hidden" onchange="handleFileUpload(event)">
+                    </label>
+                    <button onclick="generateAllSections()" class="generate-btn text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 hover:shadow-lg transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        Generate All with AI
+                    </button>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="downloadPDF()" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium flex items-center gap-2 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        PDF
+                    </button>
+                    <button onclick="downloadDOCX()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        DOCX
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading Overlay -->
+            <div id="loadingOverlay" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+                <div class="bg-white rounded-2xl p-8 text-center">
+                    <div class="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full loading-spinner mx-auto mb-4"></div>
+                    <p class="text-lg font-medium text-gray-800" id="loadingText">Generating with AI...</p>
+                    <p class="text-sm text-gray-500 mt-2">Creating humanized, industry-focused content</p>
+                </div>
+            </div>
+
+            <!-- Resume Sections -->
+            <div class="grid lg:grid-cols-2 gap-6">
+                <!-- Left Column -->
+                <div class="space-y-6">
+                    <!-- Contact Information -->
+                    <div class="section-card bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                                <span class="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center text-sm">👤</span>
+                                Contact Information
+                            </h2>
+                        </div>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <input type="text" id="fullName" placeholder="Full Name" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" value="">
+                            <input type="email" id="email" placeholder="Email Address" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" value="">
+                            <input type="tel" id="phone" placeholder="Phone Number" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" value="">
+                            <input type="text" id="location" placeholder="City, State" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" value="">
+                            <input type="url" id="linkedin" placeholder="LinkedIn URL" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" value="">
+                            <input type="url" id="portfolio" placeholder="Portfolio/Website URL" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" value="">
+                        </div>
+                    </div>
+
+                    <!-- Resume Strategy / Target Role -->
+                    <div class="section-card bg-white rounded-xl shadow-sm p-6 border-l-4 border-indigo-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                                <span class="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center text-sm">🎯</span>
+                                Resume Strategy & Target
+                            </h2>
+                            <button onclick="document.getElementById('targetRoleModal').classList.remove('hidden'); setTimeout(() => document.getElementById('targetRoleModal').classList.remove('opacity-0'), 10);" class="text-indigo-600 text-sm font-medium hover:underline">
+                                Edit Strategy
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Target Role</label>
+                                <input type="text" id="targetRole" placeholder="e.g. Senior Product Manager" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium text-gray-800">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Industry</label>
+                                <input type="text" id="industry" placeholder="e.g. FinTech / SaaS" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium text-gray-800">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Experience Level</label>
+                                <input type="text" id="yearsExp" placeholder="e.g. 5+ years" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            </div>
+                        </div>
+                        <div class="mt-3 bg-blue-50 text-blue-800 text-xs px-3 py-2 rounded-lg flex items-start gap-2">
+                            <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            All AI content will be optimized for this role and industry.
+                        </div>
+                    </div>
+
+                    <!-- Professional Summary -->
+                    <div class="section-card bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                                <span class="w-8 h-8 bg-green-100 text-green-600 rounded-lg flex items-center justify-center text-sm">📝</span>
+                                Professional Summary
+                            </h2>
+                            <button onclick="generateSection('summary')" class="generate-btn text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                                Generate
+                            </button>
+                        </div>
+                        <textarea id="summary" rows="4" placeholder="Click 'Generate' to create a summary tailored to your target role..." class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"></textarea>
+                        <div class="flex items-center gap-3 mt-2">
+                            <button onclick="optimizeSummaryForATS()" class="text-sm text-green-600 hover:text-green-800 font-medium flex items-center gap-1 px-2 py-1 rounded hover:bg-green-50 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Optimize for ATS
+                            </button>
+                            <span class="text-xs text-gray-400">40-60 words • No first-person • Action-oriented</span>
+                        </div>
+                    </div>
+
+                    <!-- Work Experience -->
+                    <div class="section-card bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                                <span class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-sm">💼</span>
+                                Work Experience
+                            </h2>
+                            <button onclick="addExperience()" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700">+ Add</button>
+                        </div>
+                        <div id="experienceContainer" class="space-y-4">
+                            <!-- Experience entries will be added here -->
+                        </div>
+                    </div>
+
+                    <!-- Education -->
+                    <div class="section-card bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                                <span class="w-8 h-8 bg-yellow-100 text-yellow-600 rounded-lg flex items-center justify-center text-sm">🎓</span>
+                                Education
+                            </h2>
+                            <button onclick="addEducation()" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700">+ Add</button>
+                        </div>
+                        <div id="educationContainer" class="space-y-4">
+                            <!-- Education entries will be added here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="space-y-6">
+                    <!-- Skills -->
+                    <div class="section-card bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                                <span class="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center text-sm">🛠️</span>
+                                Skills
+                            </h2>
+                            <button onclick="generateSection('skills')" class="generate-btn text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                                Generate
+                            </button>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-sm font-medium text-gray-600 mb-1 block">Technical Skills</label>
+                                <textarea id="technicalSkills" rows="2" placeholder="e.g., Python, JavaScript, React, Node.js, AWS, Docker" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"></textarea>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-600 mb-1 block">Soft Skills</label>
+                                <textarea id="softSkills" rows="2" placeholder="e.g., Leadership, Communication, Problem-solving, Team Collaboration" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"></textarea>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-600 mb-1 block">Tools & Platforms</label>
+                                <textarea id="tools" rows="2" placeholder="e.g., Git, JIRA, Figma, VS Code, Kubernetes" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Projects -->
+                    <div class="section-card bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                                <span class="w-8 h-8 bg-orange-100 text-orange-600 rounded-lg flex items-center justify-center text-sm">🚀</span>
+                                Projects
+                            </h2>
+                            <button onclick="addProject()" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700">+ Add</button>
+                        </div>
+                        <div id="projectsContainer" class="space-y-4">
+                            <!-- Project entries will be added here -->
+                        </div>
+                    </div>
+
+                    <!-- Certifications -->
+                    <div class="section-card bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                                <span class="w-8 h-8 bg-teal-100 text-teal-600 rounded-lg flex items-center justify-center text-sm">🏆</span>
+                                Certifications
+                            </h2>
+                            <button onclick="addCertification()" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700">+ Add</button>
+                        </div>
+                        <div id="certificationsContainer" class="space-y-3">
+                            <!-- Certification entries will be added here -->
+                        </div>
+                    </div>
+
+                    <!-- Languages -->
+                    <div class="section-card bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                                <span class="w-8 h-8 bg-pink-100 text-pink-600 rounded-lg flex items-center justify-center text-sm">🌍</span>
+                                Languages
+                            </h2>
+                            <button onclick="addLanguage()" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700">+ Add</button>
+                        </div>
+                        <div id="languagesContainer" class="space-y-2">
+                            <!-- Language entries will be added here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Tab -->
+        <div id="content-preview" class="tab-content hidden">
+            <div class="bg-white rounded-xl shadow-lg p-8 max-w-4xl mx-auto">
+                <div id="resumePreview" class="resume-preview">
+                    <!-- Preview will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ATS Score Tab -->
+        <div id="content-ats" class="tab-content hidden">
+            <div class="max-w-4xl mx-auto">
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800">ATS Compatibility Analysis</h2>
+                            <p class="text-sm text-gray-500">Analyze your resume against ATS standards for your target role</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div>
+                                <p class="text-sm text-blue-800 font-medium">What this analysis checks:</p>
+                                <ul class="text-xs text-blue-700 mt-1 space-y-1">
+                                    <li>• Format compliance (no special characters, proper structure)</li>
+                                    <li>• Action verbs usage and tense consistency</li>
+                                    <li>• Bullet point length and word count</li>
+                                    <li>• First-person pronoun detection</li>
+                                    <li>• Section completeness for your target role: <strong id="atsTargetRole">${resumeData.targetRole || 'Not set'}</strong></li>
+                                    <li>• Industry keyword relevance for: <strong id="atsIndustry">${resumeData.industry || 'Not set'}</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button onclick="calculateATSScore()" class="w-full generate-btn text-white px-6 py-4 rounded-xl font-medium flex items-center justify-center gap-2 text-lg hover:shadow-lg transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        Analyze My Resume for ATS Compliance
+                    </button>
+                </div>
+
+                <div id="atsResults" class="hidden">
+                    <!-- ATS Results will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="content-settings" class="tab-content hidden">
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        API Settings
+                    </h2>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">OpenRouter API Key</label>
+                            <input type="password" id="apiKey" placeholder="sk-or-v1-..." class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            <p class="mt-2 text-sm text-gray-500">Get your free API key from <a href="https://openrouter.ai/keys" target="_blank" class="text-indigo-600 hover:underline">openrouter.ai/keys</a></p>
+                        </div>
+
+                        <!-- Test API Connection -->
+                        <div>
+                            <button onclick="testAPIConnection()" id="testApiBtn" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                </svg>
+                                Test API Connection
+                            </button>
+                        </div>
+
+                        <!-- API Connection Status -->
+                        <div id="apiConnectionStatus" class="hidden">
+                            <div id="apiStatusContent" class="rounded-lg p-4">
+                                <!-- Status will be shown here -->
+                            </div>
+                        </div>
+
+                        <!-- Available Models (loaded from API) -->
+                        <div id="modelsSection" class="hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Available AI Models</label>
+                            <select id="aiModel" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                <option value="">-- Test API to load models --</option>
+                            </select>
+                            <p class="mt-2 text-xs text-gray-500">Models are loaded based on your API key permissions</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Writing Tone</label>
+                            <select id="writingTone" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                <option value="professional">Professional & Concise</option>
+                                <option value="humanized" selected>Humanized & Impactful</option>
+                                <option value="technical">Technical & Detailed</option>
+                                <option value="executive">Executive & Strategic</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" id="focusMetrics" checked class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <label for="focusMetrics" class="text-sm text-gray-700">Focus on quantifiable metrics and industry impact</label>
+                        </div>
+
+                        <button onclick="saveSettings()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition">
+                            Save Settings
+                        </button>
+
+                        <div id="settingsStatus" class="hidden text-center py-2 rounded-lg"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6 mt-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Data Management</h3>
+                    <div class="flex gap-4">
+                        <button onclick="exportData()" class="flex-1 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition">
+                            Export All Data
+                        </button>
+                        <button onclick="clearAllData()" class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition">
+                            Clear All Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Target Role Modal -->
+    <div id="targetRoleModal" class="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full mx-4 transform scale-95 transition-transform duration-300" id="targetRoleModalContent">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">Target Your Resume</h2>
+                <p class="text-gray-600 mt-2">To generate high-impact, ATS-friendly content, the AI needs to know your target role.</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Target Job Title <span class="text-red-500">*</span></label>
+                    <input type="text" id="modalTargetRole" placeholder="e.g., Senior Product Designer" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-50 text-lg">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Target Industry <span class="text-red-500">*</span></label>
+                    <input type="text" id="modalIndustry" placeholder="e.g., SaaS / FinTech" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-50">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Experience Level</label>
+                    <select id="modalYearsExp" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-gray-50">
+                        <option value="">Select experience...</option>
+                        <option value="Entry Level (0-2 years)">Entry Level (0-2 years)</option>
+                        <option value="Mid Level (3-5 years)">Mid Level (3-5 years)</option>
+                        <option value="Senior Level (5-8 years)">Senior Level (5-8 years)</option>
+                        <option value="Executive (10+ years)">Executive (10+ years)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button onclick="saveTargetRoleFromModal()" class="w-full mt-8 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-xl font-bold text-lg hover:shadow-xl hover:scale-[1.02] transition-all">
+                Start Building Resume
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <span id="toastMessage"></span>
+    </div>
+
+    <script>
+        // Initialize PDF.js worker
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        // State Management
+        let resumeData = {
+            contact: {},
+            summary: '',
+            targetRole: '',
+            yearsExp: '',
+            industry: '',
+            experience: [],
+            education: [],
+            skills: { technical: '', soft: '', tools: '' },
+            projects: [],
+            certifications: [],
+            languages: []
+        };
+
+        let settings = {
+            apiKey: '',
+            model: 'meta-llama/llama-3.1-8b-instruct:free',
+            tone: 'humanized',
+            focusMetrics: true
+        };
+
+        // Load saved data on startup
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSettings();
+            loadResumeData();
+            initializeSections();
+            checkTargetRole();
+        });
+
+        function checkTargetRole() {
+            if (!resumeData.targetRole || !resumeData.industry) {
+                const modal = document.getElementById('targetRoleModal');
+                modal.classList.remove('hidden');
+                // Trigger reflow
+                void modal.offsetWidth; 
+                modal.classList.remove('opacity-0');
+                document.getElementById('modalTargetRole').focus();
+            }
+        }
+
+        function saveTargetRoleFromModal() {
+            const role = document.getElementById('modalTargetRole').value;
+            const industry = document.getElementById('modalIndustry').value;
+            const exp = document.getElementById('modalYearsExp').value;
+
+            if (!role || !industry) {
+                showToast('Please fill in required fields');
+                return;
+            }
+
+            // Update data
+            resumeData.targetRole = role;
+            resumeData.industry = industry;
+            resumeData.yearsExp = exp;
+            
+            // Update UI
+            document.getElementById('targetRole').value = role;
+            document.getElementById('industry').value = industry;
+            document.getElementById('yearsExp').value = exp;
+            
+            saveResumeData();
+
+            // Hide modal
+            const modal = document.getElementById('targetRoleModal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+            
+            showToast('Target role saved! You can now generate content.');
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('resumeBuilderSettings');
+            if (saved) {
+                settings = JSON.parse(saved);
+                document.getElementById('apiKey').value = settings.apiKey || '';
+                document.getElementById('writingTone').value = settings.tone || 'humanized';
+                document.getElementById('focusMetrics').checked = settings.focusMetrics !== false;
+                
+                // If we have saved models, populate the dropdown
+                if (settings.availableModels && settings.availableModels.length > 0) {
+                    populateModelsDropdown(settings.availableModels, settings.model);
+                    document.getElementById('modelsSection').classList.remove('hidden');
+                }
+            }
+        }
+
+        function saveSettings() {
+            const modelSelect = document.getElementById('aiModel');
+            settings = {
+                apiKey: document.getElementById('apiKey').value,
+                model: modelSelect.value || settings.model || 'meta-llama/llama-3.1-8b-instruct:free',
+                tone: document.getElementById('writingTone').value,
+                focusMetrics: document.getElementById('focusMetrics').checked,
+                availableModels: settings.availableModels || []
+            };
+            localStorage.setItem('resumeBuilderSettings', JSON.stringify(settings));
+            showStatus('settingsStatus', 'Settings saved successfully!', 'success');
+            showToast('Settings saved!');
+        }
+
+        async function testAPIConnection() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const statusContainer = document.getElementById('apiConnectionStatus');
+            const statusContent = document.getElementById('apiStatusContent');
+            const testBtn = document.getElementById('testApiBtn');
+            
+            if (!apiKey) {
+                showToast('Please enter your API key first');
+                return;
+            }
+            
+            // Show loading state
+            testBtn.disabled = true;
+            testBtn.innerHTML = `
+                <svg class="w-5 h-5 loading-spinner" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Testing Connection...
+            `;
+            
+            statusContainer.classList.remove('hidden');
+            statusContent.innerHTML = `
+                <div class="flex items-center gap-3 text-gray-600">
+                    <div class="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full loading-spinner"></div>
+                    <span>Connecting to OpenRouter API...</span>
+                </div>
+            `;
+            
+            try {
+                // Fetch available models from OpenRouter
+                const response = await fetch('https://openrouter.ai/api/v1/models', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error?.message || `API Error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                const models = data.data || [];
+                
+                // Filter to get useful models (free and popular ones first)
+                const sortedModels = models.sort((a, b) => {
+                    // Prioritize free models
+                    const aFree = a.id.includes(':free') || (a.pricing?.prompt === '0' && a.pricing?.completion === '0');
+                    const bFree = b.id.includes(':free') || (b.pricing?.prompt === '0' && b.pricing?.completion === '0');
+                    if (aFree && !bFree) return -1;
+                    if (!aFree && bFree) return 1;
+                    return (a.name || a.id).localeCompare(b.name || b.id);
+                });
+                
+                // Store models in settings
+                settings.availableModels = sortedModels.slice(0, 50).map(m => ({
+                    id: m.id,
+                    name: m.name || m.id,
+                    isFree: m.id.includes(':free') || (m.pricing?.prompt === '0' && m.pricing?.completion === '0')
+                }));
+                
+                // Populate dropdown
+                populateModelsDropdown(settings.availableModels, settings.model);
+                document.getElementById('modelsSection').classList.remove('hidden');
+                
+                // Show success status
+                statusContent.innerHTML = `
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex items-center gap-3 text-green-700 mb-2">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="font-semibold">Connection Successful!</span>
+                        </div>
+                        <p class="text-sm text-green-600">Found ${models.length} available models. ${settings.availableModels.filter(m => m.isFree).length} free models loaded.</p>
+                    </div>
+                `;
+                
+                // Auto-save settings
+                saveSettings();
+                showToast('API connected! Models loaded successfully.');
+                
+            } catch (error) {
+                console.error('API Test Error:', error);
+                statusContent.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div class="flex items-center gap-3 text-red-700 mb-2">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="font-semibold">Connection Failed</span>
+                        </div>
+                        <p class="text-sm text-red-600">${error.message}</p>
+                        <p class="text-xs text-red-500 mt-2">Please check your API key and try again.</p>
+                    </div>
+                `;
+                showToast('API connection failed. Check your key.');
+            } finally {
+                // Reset button
+                testBtn.disabled = false;
+                testBtn.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                    Test API Connection
+                `;
+            }
+        }
+
+        function populateModelsDropdown(models, selectedModel) {
+            const select = document.getElementById('aiModel');
+            select.innerHTML = '';
+            
+            // Group models
+            const freeModels = models.filter(m => m.isFree);
+            const paidModels = models.filter(m => !m.isFree);
+            
+            if (freeModels.length > 0) {
+                const freeGroup = document.createElement('optgroup');
+                freeGroup.label = '🆓 Free Models';
+                freeModels.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = model.name;
+                    if (model.id === selectedModel) option.selected = true;
+                    freeGroup.appendChild(option);
+                });
+                select.appendChild(freeGroup);
+            }
+            
+            if (paidModels.length > 0) {
+                const paidGroup = document.createElement('optgroup');
+                paidGroup.label = '💰 Paid Models';
+                paidModels.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = model.name;
+                    if (model.id === selectedModel) option.selected = true;
+                    paidGroup.appendChild(option);
+                });
+                select.appendChild(paidGroup);
+            }
+            
+            // If no model was selected, select the first free one
+            if (!selectedModel && freeModels.length > 0) {
+                select.value = freeModels[0].id;
+                settings.model = freeModels[0].id;
+            }
+        }
+
+        function loadResumeData() {
+            const saved = localStorage.getItem('resumeData');
+            if (saved) {
+                resumeData = JSON.parse(saved);
+                populateForm();
+            }
+        }
+
+        function saveResumeData() {
+            collectFormData();
+            localStorage.setItem('resumeData', JSON.stringify(resumeData));
+        }
+
+        function populateForm() {
+            // Contact
+            document.getElementById('fullName').value = resumeData.contact.name || '';
+            document.getElementById('email').value = resumeData.contact.email || '';
+            document.getElementById('phone').value = resumeData.contact.phone || '';
+            document.getElementById('location').value = resumeData.contact.location || '';
+            document.getElementById('linkedin').value = resumeData.contact.linkedin || '';
+            document.getElementById('portfolio').value = resumeData.contact.portfolio || '';
+            
+            // Summary
+            document.getElementById('targetRole').value = resumeData.targetRole || '';
+            document.getElementById('yearsExp').value = resumeData.yearsExp || '';
+            document.getElementById('industry').value = resumeData.industry || '';
+            document.getElementById('summary').value = resumeData.summary || '';
+            
+            // Skills
+            document.getElementById('technicalSkills').value = resumeData.skills?.technical || '';
+            document.getElementById('softSkills').value = resumeData.skills?.soft || '';
+            document.getElementById('tools').value = resumeData.skills?.tools || '';
+        }
+
+        function collectFormData() {
+            resumeData.contact = {
+                name: document.getElementById('fullName').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                location: document.getElementById('location').value,
+                linkedin: document.getElementById('linkedin').value,
+                portfolio: document.getElementById('portfolio').value
+            };
+            resumeData.targetRole = document.getElementById('targetRole').value;
+            resumeData.yearsExp = document.getElementById('yearsExp').value;
+            resumeData.industry = document.getElementById('industry').value;
+            resumeData.summary = document.getElementById('summary').value;
+            resumeData.skills = {
+                technical: document.getElementById('technicalSkills').value,
+                soft: document.getElementById('softSkills').value,
+                tools: document.getElementById('tools').value
+            };
+            
+            // Collect experience
+            resumeData.experience = [];
+            document.querySelectorAll('#experienceContainer .experience-entry').forEach(entry => {
+                resumeData.experience.push({
+                    title: entry.querySelector('.exp-title')?.value || '',
+                    company: entry.querySelector('.exp-company')?.value || '',
+                    dates: entry.querySelector('.exp-dates')?.value || '',
+                    location: entry.querySelector('.exp-location')?.value || '',
+                    bullets: entry.querySelector('.exp-bullets')?.value || ''
+                });
+            });
+            
+            // Collect education
+            resumeData.education = [];
+            document.querySelectorAll('#educationContainer .education-entry').forEach(entry => {
+                resumeData.education.push({
+                    degree: entry.querySelector('.edu-degree')?.value || '',
+                    school: entry.querySelector('.edu-school')?.value || '',
+                    dates: entry.querySelector('.edu-dates')?.value || '',
+                    details: entry.querySelector('.edu-details')?.value || ''
+                });
+            });
+            
+            // Collect projects
+            resumeData.projects = [];
+            document.querySelectorAll('#projectsContainer .project-entry').forEach(entry => {
+                resumeData.projects.push({
+                    name: entry.querySelector('.proj-name')?.value || '',
+                    tech: entry.querySelector('.proj-tech')?.value || '',
+                    description: entry.querySelector('.proj-description')?.value || ''
+                });
+            });
+            
+            // Collect certifications
+            resumeData.certifications = [];
+            document.querySelectorAll('#certificationsContainer .cert-entry').forEach(entry => {
+                resumeData.certifications.push({
+                    name: entry.querySelector('.cert-name')?.value || '',
+                    issuer: entry.querySelector('.cert-issuer')?.value || '',
+                    date: entry.querySelector('.cert-date')?.value || ''
+                });
+            });
+            
+            // Collect languages
+            resumeData.languages = [];
+            document.querySelectorAll('#languagesContainer .lang-entry').forEach(entry => {
+                resumeData.languages.push({
+                    language: entry.querySelector('.lang-name')?.value || '',
+                    proficiency: entry.querySelector('.lang-level')?.value || ''
+                });
+            });
+        }
+
+        function initializeSections() {
+            // Add default entries if empty
+            if (resumeData.experience.length === 0) {
+                addExperience();
+            } else {
+                resumeData.experience.forEach((exp, i) => addExperience(exp));
+            }
+            
+            if (resumeData.education.length === 0) {
+                addEducation();
+            } else {
+                resumeData.education.forEach((edu, i) => addEducation(edu));
+            }
+            
+            if (resumeData.projects.length === 0) {
+                addProject();
+            } else {
+                resumeData.projects.forEach((proj, i) => addProject(proj));
+            }
+            
+            if (resumeData.certifications.length > 0) {
+                resumeData.certifications.forEach((cert, i) => addCertification(cert));
+            }
+            
+            if (resumeData.languages.length > 0) {
+                resumeData.languages.forEach((lang, i) => addLanguage(lang));
+            }
+        }
+
+        // Section Management
+        function addExperience(data = {}) {
+            const container = document.getElementById('experienceContainer');
+            const entry = document.createElement('div');
+            entry.className = 'experience-entry bg-gray-50 rounded-lg p-4 fade-in';
+            
+            // Check if this entry has existing content (from import)
+            const hasExistingContent = data.bullets && data.bullets.trim().length > 0;
+            
+            entry.innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <span class="text-sm font-medium text-gray-500">Position ${container.children.length + 1}</span>
+                    <button onclick="this.closest('.experience-entry').remove(); saveResumeData();" class="text-red-500 hover:text-red-700" title="Remove">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="grid md:grid-cols-2 gap-3">
+                    <input type="text" class="exp-title w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Job Title" value="${(data.title || '').replace(/"/g, '&quot;')}" onchange="saveResumeData()">
+                    <input type="text" class="exp-company w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Company Name" value="${(data.company || '').replace(/"/g, '&quot;')}" onchange="saveResumeData()">
+                    <input type="text" class="exp-dates w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Dates (e.g., Jan 2020 - Present)" value="${(data.dates || '').replace(/"/g, '&quot;')}" onchange="saveResumeData()">
+                    <input type="text" class="exp-location w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Location" value="${(data.location || '').replace(/"/g, '&quot;')}" onchange="saveResumeData()">
+                </div>
+                <textarea class="exp-bullets w-full mt-3 px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none" rows="4" placeholder="• Key achievement with metrics (e.g., Increased sales by 25%)&#10;• Another accomplishment with business impact&#10;• Technical contribution or leadership example" onchange="saveResumeData()">${(data.bullets || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                <div class="flex flex-wrap gap-2 mt-2">
+                    <button onclick="generateExperienceBullets(this)" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 px-2 py-1 rounded hover:bg-indigo-50 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        ${hasExistingContent ? 'Optimize with AI' : 'Generate with AI'}
+                    </button>
+                    ${hasExistingContent ? `
+                    <button onclick="rewriteForATS(this)" class="text-sm text-green-600 hover:text-green-800 font-medium flex items-center gap-1 px-2 py-1 rounded hover:bg-green-50 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Make ATS-Friendly
+                    </button>
+                    ` : ''}
+                </div>
+            `;
+            container.appendChild(entry);
+        }
+        
+        // Optimize summary for ATS
+        async function optimizeSummaryForATS() {
+            const summaryField = document.getElementById('summary');
+            const existingSummary = summaryField.value;
+            
+            if (!existingSummary.trim()) {
+                showToast('No summary to optimize. Generate one first!');
+                return;
+            }
+            
+            const targetRole = document.getElementById('targetRole').value;
+            const industry = document.getElementById('industry').value;
+            
+            if (!targetRole || !industry) {
+                showToast('Please set Target Job Title and Industry first!');
+                return;
+            }
+            
+            showLoading('Optimizing summary for ATS...');
+            
+            try {
+                const systemMessage = `You are an ATS summary optimizer. Rewrite the summary to be ATS-compliant while preserving key information.
+
+STRICT RULES:
+- Single paragraph, 40-60 words exactly
+- No first-person pronouns (I, me, my, we, our)
+- No filler phrases (results-driven, dynamic, passionate)
+- Start with experience level + role
+- Include 2-3 industry keywords
+- Add a metric if possible
+- Plain text only, no formatting`;
+
+                const userMessage = `Rewrite this summary to be ATS-compliant:
+
+ORIGINAL:
+${existingSummary}
+
+TARGET: ${targetRole} in ${industry}
+
+REQUIREMENTS:
+- 40-60 words
+- No pronouns
+- No clichés
+- Include metrics
+- Include ${industry} keywords
+
+OUTPUT: Only the rewritten paragraph, nothing else.`;
+
+                const result = await callOpenRouter(systemMessage, userMessage);
+                if (result) {
+                    const validated = validateATSContent(result, 'summary');
+                    summaryField.value = validated;
+                    saveResumeData();
+                    showToast('Summary optimized for ATS!');
+                }
+            } catch (error) {
+                showToast(`Error: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Rewrite existing content for ATS compliance
+        async function rewriteForATS(button) {
+            const entry = button.closest('.experience-entry');
+            const title = entry.querySelector('.exp-title').value;
+            const company = entry.querySelector('.exp-company').value;
+            const dates = entry.querySelector('.exp-dates').value;
+            const bulletsField = entry.querySelector('.exp-bullets');
+            const existingBullets = bulletsField.value;
+            
+            if (!existingBullets.trim()) {
+                showToast('No content to optimize');
+                return;
+            }
+            
+            const targetRole = document.getElementById('targetRole').value;
+            const industry = document.getElementById('industry').value;
+            
+            if (!targetRole || !industry) {
+                showToast('Please set Target Job Title and Industry first!');
+                return;
+            }
+            
+            const isCurrentRole = dates && (dates.toLowerCase().includes('present') || dates.toLowerCase().includes('current'));
+            const tense = isCurrentRole ? 'present' : 'past';
+            
+            showLoading('Optimizing for ATS compliance...');
+            
+            try {
+                const systemMessage = `You are an ATS resume optimizer. Your job is to REWRITE existing bullet points to be ATS-compliant while preserving the original meaning and achievements.
+
+STRICT RULES:
+- Keep the same achievements/content, just improve wording
+- Each bullet starts with ${tense}-tense action verb
+- Each bullet maximum 25 words
+- Add metrics if missing (estimate reasonable numbers)
+- Remove first-person pronouns
+- Remove filler phrases and clichés
+- Plain text only
+- Use keywords relevant to the target role`;
+
+                const userMessage = `Rewrite these bullets to be ATS-friendly:
+
+ORIGINAL BULLETS:
+${existingBullets}
+
+CONTEXT:
+Role: ${title} at ${company}
+Target: ${targetRole} in ${industry}
+Tense: ${tense}
+
+REQUIREMENTS:
+- Preserve original achievements
+- Add metrics where missing
+- Start each with action verb
+- Max 25 words per bullet
+- Remove pronouns and filler
+
+OUTPUT: Only the rewritten bullets starting with •, nothing else.`;
+
+                const result = await callOpenRouter(systemMessage, userMessage);
+                if (result) {
+                    const validated = validateATSContent(result, 'bullets');
+                    bulletsField.value = validated;
+                    saveResumeData();
+                    showToast('Content optimized for ATS!');
+                }
+            } catch (error) {
+                showToast(`Error: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function addEducation(data = {}) {
+            const container = document.getElementById('educationContainer');
+            const entry = document.createElement('div');
+            entry.className = 'education-entry bg-gray-50 rounded-lg p-4 fade-in';
+            entry.innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <span class="text-sm font-medium text-gray-500">Education ${container.children.length + 1}</span>
+                    <button onclick="this.closest('.education-entry').remove(); saveResumeData();" class="text-red-500 hover:text-red-700">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="grid md:grid-cols-2 gap-3">
+                    <input type="text" class="edu-degree w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Degree (e.g., Bachelor of Science in Computer Science)" value="${data.degree || ''}" onchange="saveResumeData()">
+                    <input type="text" class="edu-school w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="School/University" value="${data.school || ''}" onchange="saveResumeData()">
+                    <input type="text" class="edu-dates w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Graduation Date" value="${data.dates || ''}" onchange="saveResumeData()">
+                    <input type="text" class="edu-details w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="GPA, Honors, Relevant Coursework" value="${data.details || ''}" onchange="saveResumeData()">
+                </div>
+            `;
+            container.appendChild(entry);
+        }
+
+        function addProject(data = {}) {
+            const container = document.getElementById('projectsContainer');
+            const entry = document.createElement('div');
+            entry.className = 'project-entry bg-gray-50 rounded-lg p-4 fade-in';
+            entry.innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <span class="text-sm font-medium text-gray-500">Project ${container.children.length + 1}</span>
+                    <button onclick="this.closest('.project-entry').remove(); saveResumeData();" class="text-red-500 hover:text-red-700">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="grid md:grid-cols-2 gap-3 mb-3">
+                    <input type="text" class="proj-name w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Project Name" value="${data.name || ''}" onchange="saveResumeData()">
+                    <input type="text" class="proj-tech w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Technologies Used" value="${data.tech || ''}" onchange="saveResumeData()">
+                </div>
+                <textarea class="proj-description w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none" rows="3" placeholder="Brief description with impact and outcomes" onchange="saveResumeData()">${data.description || ''}</textarea>
+                <div class="flex gap-2 mt-2">
+                    <button onclick="generateProjectDescription(this)" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 px-2 py-1 rounded hover:bg-indigo-50 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        Generate with AI
+                    </button>
+                </div>
+            `;
+            container.appendChild(entry);
+        }
+
+        async function generateProjectDescription(button) {
+            const entry = button.closest('.project-entry');
+            const name = entry.querySelector('.proj-name').value;
+            const tech = entry.querySelector('.proj-tech').value;
+            const descField = entry.querySelector('.proj-description');
+            const existingDesc = descField.value;
+            
+            if (!name) {
+                showToast('Please enter the project name first');
+                return;
+            }
+            
+            const targetRole = document.getElementById('targetRole').value;
+            const industry = document.getElementById('industry').value;
+            
+            if (!targetRole || !industry) {
+                showToast('Please set Target Job Title and Industry first!');
+                document.getElementById('targetRole').focus();
+                return;
+            }
+            
+            showLoading(`Generating description for ${name}...`);
+            
+            try {
+                const systemMessage = `You are an ATS resume project description expert. You write concise, impactful project descriptions that showcase technical skills and business impact.
+
+STRICT RULES:
+- Write exactly 2-3 sentences
+- Maximum 50 words total
+- No first-person pronouns (I, me, my, we, our)
+- Start with an action verb
+- Include a measurable outcome/metric
+- Mention key technologies used
+- Plain text only - no markdown, bold, or special formatting
+- Focus on business/industry impact`;
+
+                const userMessage = `Generate an ATS-optimized project description:
+
+PROJECT NAME: ${name}
+TECHNOLOGIES: ${tech || 'Not specified'}
+${existingDesc ? `EXISTING DESCRIPTION: ${existingDesc}` : ''}
+
+TARGET ROLE: ${targetRole}
+TARGET INDUSTRY: ${industry}
+
+REQUIREMENTS:
+- 2-3 sentences, max 50 words
+- Start with action verb (Built, Developed, Designed, Implemented, etc.)
+- Include a measurable result (%, users, performance improvement)
+- Make relevant to ${targetRole} in ${industry}
+- Show technical complexity and business value
+
+OUTPUT: Only the description paragraph, nothing else.`;
+
+                const result = await callOpenRouter(systemMessage, userMessage);
+                if (result) {
+                    // Validate and clean the output
+                    let cleaned = result.trim();
+                    // Remove any markdown
+                    cleaned = cleaned.replace(/\*\*/g, '').replace(/\*/g, '').replace(/#/g, '');
+                    // Remove first-person pronouns
+                    cleaned = cleaned.replace(/\b(I|me|my|mine|myself|we|our|ours)\b/gi, '');
+                    // Clean up extra spaces
+                    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+                    
+                    descField.value = cleaned;
+                    saveResumeData();
+                    showToast(`Project description generated!`);
+                }
+            } catch (error) {
+                showToast(`Error: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function addCertification(data = {}) {
+            const container = document.getElementById('certificationsContainer');
+            const entry = document.createElement('div');
+            entry.className = 'cert-entry bg-gray-50 rounded-lg p-3 fade-in flex items-center gap-3';
+            entry.innerHTML = `
+                <input type="text" class="cert-name flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Certification Name" value="${data.name || ''}" onchange="saveResumeData()">
+                <input type="text" class="cert-issuer w-40 px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Issuer" value="${data.issuer || ''}" onchange="saveResumeData()">
+                <input type="text" class="cert-date w-28 px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Date" value="${data.date || ''}" onchange="saveResumeData()">
+                <button onclick="this.closest('.cert-entry').remove(); saveResumeData();" class="text-red-500 hover:text-red-700">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            `;
+            container.appendChild(entry);
+        }
+
+        function addLanguage(data = {}) {
+            const container = document.getElementById('languagesContainer');
+            const entry = document.createElement('div');
+            entry.className = 'lang-entry bg-gray-50 rounded-lg p-3 fade-in flex items-center gap-3';
+            entry.innerHTML = `
+                <input type="text" class="lang-name flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Language" value="${data.language || ''}" onchange="saveResumeData()">
+                <select class="lang-level w-40 px-3 py-2 border border-gray-200 rounded-lg text-sm" onchange="saveResumeData()">
+                    <option value="">Proficiency</option>
+                    <option value="Native" ${data.proficiency === 'Native' ? 'selected' : ''}>Native</option>
+                    <option value="Fluent" ${data.proficiency === 'Fluent' ? 'selected' : ''}>Fluent</option>
+                    <option value="Proficient" ${data.proficiency === 'Proficient' ? 'selected' : ''}>Proficient</option>
+                    <option value="Intermediate" ${data.proficiency === 'Intermediate' ? 'selected' : ''}>Intermediate</option>
+                    <option value="Basic" ${data.proficiency === 'Basic' ? 'selected' : ''}>Basic</option>
+                </select>
+                <button onclick="this.closest('.lang-entry').remove(); saveResumeData();" class="text-red-500 hover:text-red-700">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            `;
+            container.appendChild(entry);
+        }
+
+        // Tab Management
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.remove('tab-active'));
+            
+            document.getElementById(`content-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabName}`).classList.add('tab-active');
+            
+            if (tabName === 'preview') {
+                renderPreview();
+            }
+        }
+
+        // ============ ATS VALIDATION RULES ============
+        const ATS_RULES = {
+            // Forbidden characters (beyond standard punctuation)
+            forbiddenChars: /[^\w\s.,;:!?()'\-–—@#$%&*+=/\\|<>[\]{}""''•·₹€£¥°±×÷]/g,
+            // Filler phrases to avoid
+            fillerPhrases: [
+                'results-driven', 'dynamic professional', 'team player', 'self-starter',
+                'go-getter', 'think outside the box', 'synergy', 'leverage',
+                'passionate about', 'highly motivated', 'excellent communication skills',
+                'detail-oriented', 'hard worker', 'fast learner'
+            ],
+            // First person pronouns to remove
+            firstPersonPronouns: /\b(I|me|my|mine|myself|we|our|ours)\b/gi,
+            // Action verbs for bullets
+            actionVerbs: [
+                'Achieved', 'Administered', 'Analyzed', 'Architected', 'Automated',
+                'Built', 'Championed', 'Collaborated', 'Completed', 'Configured',
+                'Created', 'Decreased', 'Delivered', 'Designed', 'Developed',
+                'Directed', 'Drove', 'Eliminated', 'Enabled', 'Engineered',
+                'Enhanced', 'Established', 'Exceeded', 'Executed', 'Expanded',
+                'Facilitated', 'Generated', 'Grew', 'Headed', 'Identified',
+                'Implemented', 'Improved', 'Increased', 'Initiated', 'Integrated',
+                'Launched', 'Led', 'Managed', 'Mentored', 'Migrated',
+                'Negotiated', 'Optimized', 'Orchestrated', 'Oversaw', 'Pioneered',
+                'Planned', 'Produced', 'Reduced', 'Redesigned', 'Refactored',
+                'Resolved', 'Restructured', 'Revamped', 'Scaled', 'Simplified',
+                'Spearheaded', 'Standardized', 'Streamlined', 'Strengthened', 'Supervised',
+                'Transformed', 'Unified', 'Upgraded'
+            ],
+            maxBulletWords: 25,
+            maxSummaryWords: 60,
+            minSummaryWords: 40
+        };
+
+        // Validate and clean AI output
+        function validateATSContent(content, type = 'general') {
+            let cleaned = content;
+            let issues = [];
+
+            // Remove forbidden characters
+            cleaned = cleaned.replace(ATS_RULES.forbiddenChars, '');
+
+            // Remove first-person pronouns
+            const pronounMatches = cleaned.match(ATS_RULES.firstPersonPronouns);
+            if (pronounMatches) {
+                issues.push(`Removed ${pronounMatches.length} first-person pronouns`);
+                cleaned = cleaned.replace(ATS_RULES.firstPersonPronouns, '');
+            }
+
+            // Check for filler phrases
+            ATS_RULES.fillerPhrases.forEach(phrase => {
+                const regex = new RegExp(phrase, 'gi');
+                if (regex.test(cleaned)) {
+                    issues.push(`Removed filler phrase: "${phrase}"`);
+                    cleaned = cleaned.replace(regex, '');
+                }
+            });
+
+            // Clean up extra spaces
+            cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+            // Type-specific validation
+            if (type === 'summary') {
+                const wordCount = cleaned.split(/\s+/).length;
+                if (wordCount > ATS_RULES.maxSummaryWords) {
+                    // Trim to max words
+                    const words = cleaned.split(/\s+/).slice(0, ATS_RULES.maxSummaryWords);
+                    cleaned = words.join(' ');
+                    if (!cleaned.endsWith('.')) cleaned += '.';
+                    issues.push(`Trimmed summary to ${ATS_RULES.maxSummaryWords} words`);
+                }
+            }
+
+            if (type === 'bullets') {
+                // Process each bullet
+                const bullets = cleaned.split('\n').filter(b => b.trim());
+                const processedBullets = bullets.map(bullet => {
+                    let b = bullet.replace(/^[•\-\*]\s*/, '').trim();
+                    
+                    // Ensure starts with action verb (capitalize first word)
+                    const words = b.split(/\s+/);
+                    if (words.length > 0) {
+                        words[0] = words[0].charAt(0).toUpperCase() + words[0].slice(1);
+                    }
+                    
+                    // Trim to max words per bullet
+                    if (words.length > ATS_RULES.maxBulletWords) {
+                        b = words.slice(0, ATS_RULES.maxBulletWords).join(' ');
+                        if (!b.endsWith('.')) b += '.';
+                    } else {
+                        b = words.join(' ');
+                    }
+                    
+                    return '• ' + b;
+                });
+                cleaned = processedBullets.join('\n');
+            }
+
+            if (issues.length > 0) {
+                console.log('ATS Validation:', issues);
+            }
+
+            return cleaned;
+        }
+
+        // AI Integration with System Message
+        async function callOpenRouter(systemMessage, userMessage, maxRetries = 1) {
+            if (!settings.apiKey) {
+                showToast('Please configure your OpenRouter API key in Settings');
+                switchTab('settings');
+                return null;
+            }
+
+            const modelToUse = settings.model || 'meta-llama/llama-3.1-8b-instruct:free';
+
+            for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                try {
+                    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${settings.apiKey}`,
+                            'Content-Type': 'application/json',
+                            'HTTP-Referer': window.location.origin,
+                            'X-Title': 'ATS Resume Builder'
+                        },
+                        body: JSON.stringify({
+                            model: modelToUse,
+                            messages: [
+                                { role: 'system', content: systemMessage },
+                                { role: 'user', content: userMessage }
+                            ],
+                            temperature: 0.6,
+                            max_tokens: 1000
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error?.message || 'API request failed');
+                    }
+
+                    const data = await response.json();
+                    return data.choices[0].message.content;
+                } catch (error) {
+                    if (attempt === maxRetries) throw error;
+                    console.log(`Retry ${attempt + 1}/${maxRetries}...`);
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+            }
+        }
+
+        // Legacy support for single-prompt calls
+        async function callOpenRouterLegacy(prompt) {
+            return callOpenRouter(
+                'You are an ATS resume optimization assistant. Follow all formatting rules strictly.',
+                prompt
+            );
+        }
+
+        function getToneInstructions() {
+            const tones = {
+                professional: 'Use a formal, concise professional tone. Be direct and business-focused.',
+                humanized: 'Use a warm, engaging tone that sounds natural and human. Avoid robotic language. Make it conversational yet professional.',
+                technical: 'Use precise technical language. Include specific technologies, methodologies, and technical achievements.',
+                executive: 'Use strategic, leadership-focused language. Emphasize vision, team leadership, and organizational impact.'
+            };
+            return tones[settings.tone] || tones.humanized;
+        }
+
+        async function generateSection(sectionType) {
+            collectFormData();
+            
+            // Validate required fields
+            const targetRole = resumeData.targetRole;
+            const industry = resumeData.industry;
+            
+            if (!targetRole || !industry) {
+                showToast('Please enter your Target Job Title and Industry first!');
+                document.getElementById('targetRole').focus();
+                return;
+            }
+            
+            showLoading(`Generating ${sectionType} for ${targetRole}...`);
+            
+            try {
+                let systemMessage = '';
+                let userMessage = '';
+                let validationType = 'general';
+
+                // ============ SUMMARY GENERATION ============
+                if (sectionType === 'summary') {
+                    systemMessage = `You are an ATS optimization assistant. You write concise, keyword-rich professional summaries for resumes. You follow these rules STRICTLY:
+- Output a single paragraph only
+- 40-60 words maximum
+- No first-person pronouns (I, me, my, we, our)
+- No filler phrases like "results-driven", "dynamic professional", "team player"
+- No bullet points or markdown
+- Plain text only
+- Use strong action-oriented language
+- Include specific metrics where possible
+- Focus on quantifiable achievements`;
+
+                    userMessage = `Write a professional summary for this candidate:
+
+TARGET ROLE: ${targetRole}
+TARGET INDUSTRY: ${industry}
+YEARS OF EXPERIENCE: ${resumeData.yearsExp || '5+'}
+KEY SKILLS: ${resumeData.skills?.technical || 'Not specified'}
+CANDIDATE NAME: ${resumeData.contact?.name || 'Professional'}
+
+STRICT REQUIREMENTS:
+- Single paragraph, 40-60 words
+- Optimized for "${targetRole}" in "${industry}"
+- No first-person (I, me, my)
+- No clichés or filler phrases
+- Include 2-3 industry keywords
+- Mention quantifiable achievement if possible
+- Plain text only, no formatting
+
+OUTPUT: Only the summary paragraph, nothing else.`;
+
+                    validationType = 'summary';
+
+                // ============ EXPERIENCE GENERATION ============
+                } else if (sectionType === 'experience') {
+                    const experiences = resumeData.experience.map(exp => 
+                        `ROLE: ${exp.title || 'Not specified'}
+COMPANY: ${exp.company || 'Not specified'}
+DATES: ${exp.dates || 'Not specified'}
+EXISTING CONTENT: ${exp.bullets || 'None'}`
+                    ).join('\n\n---\n\n');
+
+                    systemMessage = `You are an ATS resume bullet point writer. You follow these rules WITHOUT EXCEPTION:
+- Each bullet starts with a strong past-tense action verb
+- Each bullet is maximum 25 words
+- Each bullet contains a measurable result (number, percentage, dollar amount)
+- No first-person pronouns
+- No filler phrases
+- Plain text only - no bold, italics, or special formatting
+- Use industry-specific keywords
+- Format: "• [Action verb] [task/project] [result with metric]"`;
+
+                    userMessage = `Generate ATS-optimized bullet points for these positions:
+
+TARGET ROLE: ${targetRole}
+TARGET INDUSTRY: ${industry}
+
+POSITIONS:
+${experiences}
+
+STRICT REQUIREMENTS FOR EACH POSITION:
+- Generate exactly 4 bullet points
+- Each bullet starts with action verb (Achieved, Built, Created, Delivered, etc.)
+- Each bullet ≤ 25 words
+- Each bullet includes a metric (%, $, number)
+- Past tense for all roles
+- No symbols except hyphen or period
+- No first-person pronouns
+- Keywords relevant to ${targetRole}
+
+FORMAT:
+[Job Title at Company]
+• Bullet one
+• Bullet two
+• Bullet three
+• Bullet four
+
+Generate for ALL positions listed.`;
+
+                    validationType = 'bullets';
+
+                // ============ SKILLS GENERATION ============
+                } else if (sectionType === 'skills') {
+                    systemMessage = `You are an ATS keyword optimization specialist. You identify relevant skills for job targeting. Rules:
+- Use industry-standard terminology
+- No adjectives or descriptions
+- Comma-separated lists only
+- No sentences or explanations`;
+
+                    userMessage = `Generate targeted skills for this candidate:
+
+TARGET ROLE: ${targetRole}
+TARGET INDUSTRY: ${industry}
+CURRENT SKILLS: ${resumeData.skills?.technical || 'Not provided'}
+
+OUTPUT THREE COMMA-SEPARATED LISTS:
+
+1. Technical Skills: 10-12 hard skills relevant to ${targetRole} in ${industry}
+2. Soft Skills: 6-8 professional competencies valued for ${targetRole}
+3. Tools & Platforms: 8-10 software/tools used by ${targetRole} professionals
+
+FORMAT (exactly like this):
+1. Technical Skills: skill1, skill2, skill3, ...
+2. Soft Skills: skill1, skill2, skill3, ...
+3. Tools & Platforms: tool1, tool2, tool3, ...
+
+No explanations. Just the three numbered lists.`;
+
+                // ============ PROJECTS GENERATION ============
+                } else if (sectionType === 'projects') {
+                    const projects = resumeData.projects.map(p => 
+                        `NAME: ${p.name || 'Unnamed'}
+TECH: ${p.tech || 'Not specified'}
+DESCRIPTION: ${p.description || 'Not provided'}`
+                    ).join('\n\n');
+
+                    systemMessage = `You are an ATS project description writer. Rules:
+- 2 sentences maximum per project
+- Include technologies used
+- Include measurable outcome
+- No first-person pronouns
+- Plain text only`;
+
+                    userMessage = `Enhance these project descriptions:
+
+TARGET ROLE: ${targetRole}
+TARGET INDUSTRY: ${industry}
+
+PROJECTS:
+${projects}
+
+FOR EACH PROJECT:
+- Write 2 sentences maximum
+- Include key technologies
+- Include a measurable result
+- Make relevant to ${targetRole}
+
+FORMAT:
+**Project Name**
+Technologies: tech1, tech2, tech3
+Description: Two sentences with metrics.`;
+                }
+
+                // Make API call with system message
+                const result = await callOpenRouter(systemMessage, userMessage);
+                
+                if (result) {
+                    // Validate and clean the output
+                    const validatedResult = validateATSContent(result, validationType);
+                    applyGeneratedContent(sectionType, validatedResult);
+                    saveResumeData();
+                    showToast(`${sectionType} generated and validated for ATS!`);
+                }
+            } catch (error) {
+                console.error('Generation error:', error);
+                showToast(`Error: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function generateExperienceBullets(button) {
+            const entry = button.closest('.experience-entry');
+            const title = entry.querySelector('.exp-title').value;
+            const company = entry.querySelector('.exp-company').value;
+            const location = entry.querySelector('.exp-location').value;
+            const dates = entry.querySelector('.exp-dates').value;
+            const currentBullets = entry.querySelector('.exp-bullets').value;
+            const bulletsField = entry.querySelector('.exp-bullets');
+            
+            if (!title || !company) {
+                showToast('Please enter job title and company first');
+                return;
+            }
+            
+            const targetRole = document.getElementById('targetRole').value;
+            const industry = document.getElementById('industry').value;
+            
+            if (!targetRole || !industry) {
+                showToast('Please set Target Job Title and Industry first!');
+                document.getElementById('targetRole').focus();
+                return;
+            }
+            
+            // Determine tense based on dates
+            const isCurrentRole = dates && (dates.toLowerCase().includes('present') || dates.toLowerCase().includes('current'));
+            const tense = isCurrentRole ? 'present' : 'past';
+            
+            showLoading(`Generating ATS-optimized bullets for ${title}...`);
+            
+            try {
+                const systemMessage = `You are an ATS resume bullet point expert. You MUST follow these rules:
+
+FORMATTING RULES (STRICT):
+- Each bullet starts with a strong ${tense}-tense action verb
+- Each bullet is MAXIMUM 25 words
+- Each bullet contains ONE measurable result (number, %, $)
+- No first-person pronouns (I, me, my, we, our)
+- No filler phrases or clichés
+- Plain text only - no bold, italics, markdown, or emojis
+- Use only standard punctuation (. , - :)
+
+ACTION VERBS TO USE:
+${tense === 'past' ? 'Achieved, Built, Created, Delivered, Developed, Directed, Drove, Enabled, Engineered, Executed, Generated, Implemented, Improved, Increased, Led, Managed, Optimized, Orchestrated, Produced, Reduced, Scaled, Spearheaded, Streamlined, Transformed' : 'Achieve, Build, Create, Deliver, Develop, Direct, Drive, Enable, Engineer, Execute, Generate, Implement, Improve, Increase, Lead, Manage, Optimize, Orchestrate, Produce, Reduce, Scale, Spearhead, Streamline, Transform'}
+
+OUTPUT FORMAT:
+• [Verb] [what you did] [measurable result]
+• [Verb] [what you did] [measurable result]
+• [Verb] [what you did] [measurable result]
+• [Verb] [what you did] [measurable result]`;
+
+                const userMessage = `Generate 4 ATS-optimized bullet points for this role:
+
+ROLE: ${title}
+COMPANY: ${company}
+DATES: ${dates || 'Not specified'}
+LOCATION: ${location || 'Not specified'}
+${currentBullets ? `EXISTING CONTENT TO IMPROVE: ${currentBullets}` : ''}
+
+TARGET POSITION: ${targetRole}
+TARGET INDUSTRY: ${industry}
+
+REQUIREMENTS:
+- Exactly 4 bullets
+- Each bullet starts with ${tense}-tense action verb
+- Each bullet ≤ 25 words
+- Each bullet has a metric (%, $, number)
+- Keywords relevant to ${targetRole} in ${industry}
+- ${title !== targetRole ? `Frame "${title}" experience as relevant to "${targetRole}"` : `Highlight core ${targetRole} expertise`}
+
+OUTPUT: Only 4 bullet points starting with •, nothing else.`;
+
+                const result = await callOpenRouter(systemMessage, userMessage);
+                if (result) {
+                    const validated = validateATSContent(result, 'bullets');
+                    bulletsField.value = validated;
+                    saveResumeData();
+                    showToast(`ATS-optimized bullets generated!`);
+                }
+            } catch (error) {
+                showToast(`Error: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function generateAllSections() {
+            collectFormData();
+            
+            if (!settings.apiKey) {
+                showToast('Please configure your OpenRouter API key in Settings');
+                switchTab('settings');
+                return;
+            }
+            
+            // Validate required fields
+            const targetRole = resumeData.targetRole;
+            const industry = resumeData.industry;
+            
+            if (!targetRole || !industry) {
+                showToast('Please enter your Target Job Title and Industry first!');
+                document.getElementById('targetRole').focus();
+                document.getElementById('targetRole').classList.add('ring-2', 'ring-red-500');
+                document.getElementById('industry').classList.add('ring-2', 'ring-red-500');
+                setTimeout(() => {
+                    document.getElementById('targetRole').classList.remove('ring-2', 'ring-red-500');
+                    document.getElementById('industry').classList.remove('ring-2', 'ring-red-500');
+                }, 3000);
+                return;
+            }
+            
+            showLoading(`Generating all sections for ${targetRole} in ${industry}...`);
+            
+            try {
+                // Generate in sequence
+                await generateSection('summary');
+                await new Promise(r => setTimeout(r, 500)); // Small delay between API calls
+                
+                await generateSection('experience');
+                await new Promise(r => setTimeout(r, 500));
+                
+                await generateSection('skills');
+                
+                // Generate projects if any exist
+                if (resumeData.projects.some(p => p.name)) {
+                    await new Promise(r => setTimeout(r, 500));
+                    await generateSection('projects');
+                }
+                
+                hideLoading();
+                showToast(`All sections generated for ${targetRole}!`);
+            } catch (error) {
+                hideLoading();
+                showToast(`Error: ${error.message}`);
+            }
+        }
+
+        function applyGeneratedContent(sectionType, content) {
+            if (sectionType === 'summary') {
+                document.getElementById('summary').value = content.trim();
+            } else if (sectionType === 'experience') {
+                // Parse and apply to experience entries
+                const entries = document.querySelectorAll('.experience-entry');
+                const lines = content.split('\n').filter(l => l.trim());
+                let currentEntry = 0;
+                let bullets = [];
+                
+                lines.forEach(line => {
+                    if (line.startsWith('•') || line.startsWith('-') || line.startsWith('*')) {
+                        bullets.push(line);
+                    } else if (line.match(/^[A-Z]/) && !line.startsWith('•')) {
+                        if (bullets.length > 0 && entries[currentEntry]) {
+                            entries[currentEntry].querySelector('.exp-bullets').value = bullets.join('\n');
+                            currentEntry++;
+                            bullets = [];
+                        }
+                    }
+                });
+                
+                if (bullets.length > 0 && entries[currentEntry]) {
+                    entries[currentEntry].querySelector('.exp-bullets').value = bullets.join('\n');
+                }
+            } else if (sectionType === 'skills') {
+                const sections = content.split(/\d\.\s+/);
+                sections.forEach(section => {
+                    if (section.toLowerCase().includes('technical')) {
+                        const skills = section.replace(/technical skills?:?/i, '').trim();
+                        document.getElementById('technicalSkills').value = skills;
+                    } else if (section.toLowerCase().includes('soft')) {
+                        const skills = section.replace(/soft skills?:?/i, '').trim();
+                        document.getElementById('softSkills').value = skills;
+                    } else if (section.toLowerCase().includes('tools')) {
+                        const skills = section.replace(/tools.*?:?/i, '').trim();
+                        document.getElementById('tools').value = skills;
+                    }
+                });
+            }
+        }
+
+        // File Upload & Parsing
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            showLoading('Parsing your resume...');
+            
+            try {
+                let text = '';
+                
+                if (file.name.endsWith('.pdf')) {
+                    text = await parsePDF(file);
+                } else if (file.name.endsWith('.docx')) {
+                    text = await parseDOCX(file);
+                } else {
+                    throw new Error('Unsupported file format. Please upload PDF or DOCX.');
+                }
+                
+                await parseResumeText(text);
+                showToast('Resume parsed successfully! Review and edit as needed.');
+            } catch (error) {
+                console.error('Parse error:', error);
+                showToast(`Error parsing file: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function parsePDF(file) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let fullText = '';
+                
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    
+                    // Sort items by Y position (top to bottom), then X position (left to right)
+                    const sortedItems = content.items.slice().sort((a, b) => {
+                        const yDiff = b.transform[5] - a.transform[5]; // Reverse Y (PDF coords are bottom-up)
+                        if (Math.abs(yDiff) > 5) return yDiff;
+                        return a.transform[4] - b.transform[4]; // X position
+                    });
+                    
+                    let lastY = null;
+                    let lineText = '';
+                    
+                    sortedItems.forEach(item => {
+                        const currentY = Math.round(item.transform[5]);
+                        
+                        if (lastY !== null && Math.abs(currentY - lastY) > 8) {
+                            // New line detected
+                            fullText += lineText.trim() + '\n';
+                            lineText = '';
+                        }
+                        
+                        // Add space between words on same line
+                        if (lineText && !lineText.endsWith(' ') && item.str && !item.str.startsWith(' ')) {
+                            lineText += ' ';
+                        }
+                        lineText += item.str;
+                        lastY = currentY;
+                    });
+                    
+                    // Add last line
+                    if (lineText.trim()) {
+                        fullText += lineText.trim() + '\n';
+                    }
+                    fullText += '\n';
+                }
+                
+                console.log('Extracted PDF Text:', fullText.substring(0, 2000));
+                return fullText;
+            } catch (e) {
+                console.error("PDF Parse Error", e);
+                showToast("Error reading PDF. Please try a different file.");
+                throw e;
+            }
+        }
+
+        async function parseDOCX(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            return result.value;
+        }
+
+        async function parseResumeText(text) {
+            // Clean text
+            text = text.replace(/\r\n/g, '\n').replace(/\t/g, ' ').replace(/ {2,}/g, ' ').trim();
+            
+            // Check if text is valid
+            if (!text || text.length < 50) {
+                showToast('Could not extract text from file. Please try a different file.');
+                return;
+            }
+
+            console.log('=== PARSE RESUME TEXT ===');
+            console.log('Text length:', text.length);
+            console.log('First 300 chars:', text.substring(0, 300));
+
+            // Try AI-powered parsing if API key is available
+            if (settings.apiKey) {
+                showLoading('Using AI to analyze your resume...');
+                showToast('Using AI parser for better accuracy...');
+                
+                try {
+                    const systemMessage = `You are a precise resume parser. You extract structured data from resume text and return valid JSON only. You follow instructions exactly.`;
+
+                    const userMessage = `Parse this resume and extract all information into JSON format.
+
+=== RESUME TEXT ===
+${text.substring(0, 8000)}
+=== END RESUME TEXT ===
+
+EXTRACT AND RETURN THIS EXACT JSON STRUCTURE:
+
+{
+    "name": "Full Name from resume",
+    "email": "email@domain.com",
+    "phone": "phone number",
+    "location": "City, State",
+    "linkedin": "linkedin URL if present",
+    "portfolio": "website URL if present",
+    "summary": "Professional summary paragraph if present",
+    "experience": [
+        {
+            "title": "Exact Job Title",
+            "company": "Company Name",
+            "dates": "Start - End dates",
+            "location": "Job location",
+            "bullets": "• bullet 1\\n• bullet 2\\n• bullet 3"
+        }
+    ],
+    "education": [
+        {
+            "degree": "Degree Type and Field (e.g., Bachelor of Science in Computer Science)",
+            "school": "Institution Name (e.g., Stanford University)",
+            "dates": "Year or date range",
+            "details": "GPA, honors if present"
+        }
+    ],
+    "skills": {
+        "technical": "comma-separated technical skills",
+        "soft": "comma-separated soft skills",
+        "tools": "comma-separated tools"
+    },
+    "projects": [
+        {
+            "name": "Project name",
+            "tech": "Technologies",
+            "description": "Brief description"
+        }
+    ],
+    "certifications": [
+        {
+            "name": "Certification name",
+            "issuer": "Issuer",
+            "date": "Date"
+        }
+    ]
+}
+
+RULES:
+1. "degree" = degree type + field of study (NOT school name)
+2. "school" = institution name only
+3. Extract ALL work experiences found
+4. Keep bullet points as-is with • prefix
+5. Return ONLY the JSON, no explanations
+6. If a field is not found, use empty string ""
+
+OUTPUT: Valid JSON only, nothing else.`;
+
+                    const result = await callOpenRouter(systemMessage, userMessage);
+                    
+                    if (result) {
+                        console.log('AI Parser Response:', result);
+                        const jsonMatch = result.match(/\{[\s\S]*\}/);
+                        if (jsonMatch) {
+                            const parsed = JSON.parse(jsonMatch[0]);
+                            console.log('Parsed JSON:', parsed);
+                            applyParsedData(parsed);
+                            showToast('Resume parsed successfully with AI!');
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.error('AI parsing failed:', error);
+                    showToast('AI parsing failed. Switching to standard parser.');
+                }
+            } else {
+                showToast('Using standard parser (Add API key for AI accuracy).');
+            }
+            
+            // Fallback to heuristic parsing
+            heuristicParse(text);
+        }
+
+        function applyParsedData(data, showOptimizeHint = true) {
+            console.log('=== APPLYING PARSED DATA ===');
+            console.log('Data received:', data);
+            
+            // Handle both flat format and nested contact format
+            const name = data.name || data.contact?.name || '';
+            const email = data.email || data.contact?.email || '';
+            const phone = data.phone || data.contact?.phone || '';
+            const location = data.location || data.contact?.location || '';
+            const linkedin = data.linkedin || data.contact?.linkedin || '';
+            const portfolio = data.portfolio || data.contact?.portfolio || '';
+            
+            // Apply contact info
+            if (name) {
+                document.getElementById('fullName').value = name;
+                console.log('Applied name:', name);
+            }
+            if (email) {
+                document.getElementById('email').value = email;
+                console.log('Applied email:', email);
+            }
+            if (phone) {
+                document.getElementById('phone').value = phone;
+                console.log('Applied phone:', phone);
+            }
+            if (location) {
+                document.getElementById('location').value = location;
+                console.log('Applied location:', location);
+            }
+            if (linkedin) {
+                document.getElementById('linkedin').value = linkedin;
+                console.log('Applied linkedin:', linkedin);
+            }
+            if (portfolio) {
+                document.getElementById('portfolio').value = portfolio;
+            }
+            
+            // Apply summary
+            if (data.summary) {
+                document.getElementById('summary').value = data.summary;
+                console.log('Applied summary');
+            }
+            
+            // Apply experience
+            if (data.experience && data.experience.length > 0) {
+                console.log('Applying', data.experience.length, 'experience entries');
+                document.getElementById('experienceContainer').innerHTML = '';
+                data.experience.forEach((exp, idx) => {
+                    console.log(`Adding experience ${idx + 1}:`, exp);
+                    addExperience(exp);
+                });
+            }
+            
+            // Apply education
+            if (data.education && data.education.length > 0) {
+                console.log('Applying', data.education.length, 'education entries');
+                document.getElementById('educationContainer').innerHTML = '';
+                data.education.forEach((edu, idx) => {
+                    console.log(`Adding education ${idx + 1}:`, edu);
+                    // Ensure degree and school are in correct fields
+                    const schoolPatterns = /\b(university|college|institute|school|academy|polytechnic)\b/i;
+                    
+                    // Fix swapped fields if needed
+                    if (edu.degree && schoolPatterns.test(edu.degree) && (!edu.school || !schoolPatterns.test(edu.school))) {
+                        // Degree field contains school name - swap them
+                        const temp = edu.degree;
+                        edu.degree = edu.school || '';
+                        edu.school = temp;
+                        console.log('Swapped degree/school fields for education', idx + 1);
+                    }
+                    
+                    addEducation(edu);
+                });
+            }
+            
+            // Apply skills - handle both formats
+            const skills = data.skills || {};
+            if (typeof skills === 'string') {
+                document.getElementById('technicalSkills').value = skills;
+            } else {
+                if (skills.technical) {
+                    document.getElementById('technicalSkills').value = skills.technical;
+                    console.log('Applied technical skills');
+                }
+                if (skills.soft) {
+                    document.getElementById('softSkills').value = skills.soft;
+                }
+                if (skills.tools) {
+                    document.getElementById('tools').value = skills.tools;
+                }
+            }
+            
+            // Apply projects if present
+            if (data.projects && data.projects.length > 0) {
+                document.getElementById('projectsContainer').innerHTML = '';
+                data.projects.forEach(proj => addProject(proj));
+            }
+            
+            saveResumeData();
+            console.log('=== DATA APPLICATION COMPLETE ===');
+            
+            // Show optimization hint after import
+            if (showOptimizeHint && (data.experience?.length > 0 || data.summary)) {
+                setTimeout(() => {
+                    showImportSuccessModal();
+                }, 500);
+            }
+        }
+        
+        function showImportSuccessModal() {
+            // Create and show a success modal with optimization options
+            const modal = document.createElement('div');
+            modal.id = 'importSuccessModal';
+            modal.className = 'fixed inset-0 bg-black/70 z-[70] flex items-center justify-center fade-in';
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full mx-4">
+                    <div class="text-center mb-6">
+                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-800">Resume Imported!</h2>
+                        <p class="text-gray-600 mt-2">Your resume has been parsed and loaded into the editor.</p>
+                    </div>
+                    
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                        <h3 class="font-semibold text-blue-800 mb-2 flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Next Steps for ATS Optimization
+                        </h3>
+                        <ul class="text-sm text-blue-700 space-y-2">
+                            <li class="flex items-start gap-2">
+                                <span class="text-blue-500 mt-0.5">1.</span>
+                                <span>Review the imported content in each section</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-blue-500 mt-0.5">2.</span>
+                                <span>Click <strong>"Optimize for ATS"</strong> or <strong>"Make ATS-Friendly"</strong> buttons to improve each section</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <span class="text-blue-500 mt-0.5">3.</span>
+                                <span>Or click <strong>"Generate All with AI"</strong> to rewrite everything</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button onclick="document.getElementById('importSuccessModal').remove();" class="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition">
+                            Review First
+                        </button>
+                        <button onclick="document.getElementById('importSuccessModal').remove(); generateAllSections();" class="flex-1 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-medium transition">
+                            Optimize All with AI
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function heuristicParse(text) {
+            showLoading('Analyzing resume structure...');
+            
+            console.log('=== STARTING HEURISTIC PARSE ===');
+            console.log('Input text length:', text.length);
+            console.log('First 500 chars:', text.substring(0, 500));
+            
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            console.log('Total lines:', lines.length);
+            
+            const result = {
+                name: '',
+                email: '',
+                phone: '',
+                location: '',
+                linkedin: '',
+                summary: '',
+                experience: [],
+                education: [],
+                skills: {
+                    technical: '',
+                    soft: '',
+                    tools: ''
+                }
+            };
+
+            // ============ STEP 1: Extract Contact Information ============
+            
+            // Email - look anywhere in text
+            const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+            const emailMatch = text.match(emailRegex);
+            if (emailMatch) {
+                result.email = emailMatch[0];
+                console.log('Found email:', result.email);
+            }
+
+            // Phone - multiple formats
+            const phoneRegex = /(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}/g;
+            const phoneMatch = text.match(phoneRegex);
+            if (phoneMatch) {
+                result.phone = phoneMatch[0].trim();
+                console.log('Found phone:', result.phone);
+            }
+
+            // LinkedIn
+            const linkedinRegex = /(?:linkedin\.com\/in\/|linkedin:?\s*)([a-zA-Z0-9_-]+)/i;
+            const linkedinMatch = text.match(linkedinRegex);
+            if (linkedinMatch) {
+                result.linkedin = linkedinMatch[0].includes('linkedin.com') ? linkedinMatch[0] : 'linkedin.com/in/' + linkedinMatch[1];
+                console.log('Found LinkedIn:', result.linkedin);
+            }
+
+            // Name - Usually the first significant line (not an email, phone, or common word)
+            const skipWords = ['resume', 'cv', 'curriculum', 'vitae', 'page', 'contact', 'address', 'email', 'phone', 'tel', 'mobile'];
+            for (let i = 0; i < Math.min(lines.length, 8); i++) {
+                const line = lines[i];
+                const lineLower = line.toLowerCase();
+                
+                // Skip if line contains email, phone, or is too short/long
+                if (line.includes('@') || /\d{3}.*\d{3}.*\d{4}/.test(line)) continue;
+                if (line.length < 3 || line.length > 50) continue;
+                if (skipWords.some(w => lineLower.includes(w))) continue;
+                if (/^(linkedin|github|http|www\.|address|city)/i.test(line)) continue;
+                
+                // This is likely the name
+                result.name = line;
+                console.log('Found name:', result.name);
+                break;
+            }
+
+            // Location - look for city, state patterns
+            const locationRegex = /([A-Z][a-zA-Z\s]+,\s*[A-Z]{2}(?:\s+\d{5})?)/;
+            const locationMatch = text.match(locationRegex);
+            if (locationMatch) {
+                result.location = locationMatch[1].trim();
+                console.log('Found location:', result.location);
+            }
+
+            // ============ STEP 2: Identify Section Boundaries ============
+            
+            const sectionHeaders = {
+                summary: /^(summary|professional\s+summary|profile|objective|about\s*me|career\s+summary)/i,
+                experience: /^(experience|work\s+experience|employment|professional\s+experience|work\s+history|career\s+history)/i,
+                education: /^(education|academic|qualifications|educational\s+background|degrees?)/i,
+                skills: /^(skills|technical\s+skills|core\s+competencies|competencies|expertise|technologies|proficiencies)/i,
+                projects: /^(projects|key\s+projects|personal\s+projects|notable\s+projects)/i,
+                certifications: /^(certifications?|certificates?|licenses?|credentials)/i
+            };
+
+            const sections = {};
+            let currentSection = 'header';
+            let currentLines = [];
+
+            lines.forEach((line, idx) => {
+                const cleanLine = line.replace(/[:\|•\-–—]/g, '').trim();
+                let foundSection = null;
+                
+                for (const [sectionName, regex] of Object.entries(sectionHeaders)) {
+                    if (regex.test(cleanLine) && cleanLine.length < 40) {
+                        foundSection = sectionName;
+                        break;
+                    }
+                }
+
+                if (foundSection) {
+                    // Save previous section
+                    if (currentLines.length > 0) {
+                        sections[currentSection] = currentLines;
+                    }
+                    currentSection = foundSection;
+                    currentLines = [];
+                    console.log(`Found section "${foundSection}" at line ${idx}: "${line}"`);
+                } else {
+                    currentLines.push(line);
+                }
+            });
+            
+            // Save last section
+            if (currentLines.length > 0) {
+                sections[currentSection] = currentLines;
+            }
+
+            console.log('Detected sections:', Object.keys(sections));
+
+            // ============ STEP 3: Parse Summary ============
+            if (sections.summary && sections.summary.length > 0) {
+                result.summary = sections.summary.join(' ').substring(0, 500);
+                console.log('Parsed summary:', result.summary.substring(0, 100) + '...');
+            }
+
+            // ============ STEP 4: Parse Experience ============
+            if (sections.experience && sections.experience.length > 0) {
+                const expLines = sections.experience;
+                let currentJob = null;
+                
+                // Date patterns to detect job headers
+                const datePattern = /\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*\.?\s*\d{4}|(?:19|20)\d{2}\s*[-–—to]+\s*(?:(?:19|20)\d{2}|[Pp]resent|[Cc]urrent)|(?:19|20)\d{2}/i;
+                
+                expLines.forEach((line, idx) => {
+                    const hasDate = datePattern.test(line);
+                    const isBullet = /^[•\-\*\>◦▪]/.test(line) || /^\d+[\.\)]/.test(line);
+                    const isShortLine = line.length < 80 && !isBullet;
+                    
+                    // Detect job header (has date or is a title-like line at start)
+                    if (hasDate && isShortLine) {
+                        // Save previous job
+                        if (currentJob && (currentJob.title || currentJob.company)) {
+                            result.experience.push(currentJob);
+                        }
+                        
+                        // Extract date from line
+                        const dateMatch = line.match(/\b(?:(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*\.?\s*\d{4}\s*[-–—to]+\s*(?:(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*\.?\s*\d{4}|[Pp]resent|[Cc]urrent)|(?:19|20)\d{2}\s*[-–—to]+\s*(?:(?:19|20)\d{2}|[Pp]resent|[Cc]urrent)|(?:19|20)\d{2})/i);
+                        
+                        currentJob = {
+                            title: '',
+                            company: '',
+                            dates: dateMatch ? dateMatch[0] : '',
+                            location: '',
+                            bullets: ''
+                        };
+                        
+                        // Try to extract title and company from this line
+                        const lineWithoutDate = line.replace(datePattern, '').replace(/[-–—\|,]/g, ' ').trim();
+                        const parts = lineWithoutDate.split(/\s{2,}|\t/);
+                        if (parts.length >= 2) {
+                            currentJob.title = parts[0].trim();
+                            currentJob.company = parts[1].trim();
+                        } else if (parts.length === 1 && parts[0]) {
+                            currentJob.title = parts[0].trim();
+                        }
+                        
+                        console.log('New job detected:', currentJob);
+                        
+                    } else if (currentJob === null && isShortLine && !isBullet && idx < 3) {
+                        // First few lines might be job title without date
+                        currentJob = { title: line, company: '', dates: '', location: '', bullets: '' };
+                        
+                    } else if (currentJob) {
+                        // This is content for current job
+                        if (isBullet) {
+                            currentJob.bullets += line + '\n';
+                        } else if (!currentJob.company && isShortLine && line.length > 2) {
+                            // Might be company name on separate line
+                            currentJob.company = line;
+                        } else if (line.length > 20) {
+                            // Add as bullet if it's substantial content
+                            currentJob.bullets += '• ' + line + '\n';
+                        }
+                    }
+                });
+                
+                // Don't forget the last job
+                if (currentJob && (currentJob.title || currentJob.company)) {
+                    result.experience.push(currentJob);
+                }
+                
+                console.log('Parsed experience:', result.experience.length, 'jobs');
+            }
+
+            // ============ STEP 5: Parse Education ============
+            if (sections.education && sections.education.length > 0) {
+                const eduLines = sections.education;
+                let currentEdu = null;
+                
+                // Patterns to identify degree vs school
+                const degreePatterns = /\b(bachelor|master|ph\.?d|mba|b\.?s\.?c?|m\.?s\.?c?|b\.?a\.?|m\.?a\.?|b\.?e\.?|m\.?e\.?|associate|diploma|degree|doctor|certificate|certification|a\.?a\.?|a\.?s\.?)\b/i;
+                const degreeFullPatterns = /\b(bachelor of|master of|doctor of|associate of|b\.?s\.?\s+in|m\.?s\.?\s+in|b\.?a\.?\s+in|m\.?a\.?\s+in)\b/i;
+                const schoolPatterns = /\b(university|college|institute|school|academy|polytechnic|conservatory)\b/i;
+                const fieldPatterns = /\b(computer science|engineering|business|economics|mathematics|physics|chemistry|biology|psychology|arts|science|technology|management|finance|accounting|marketing|law|medicine|nursing)\b/i;
+                
+                eduLines.forEach((line, idx) => {
+                    const hasDegreeKeyword = degreePatterns.test(line);
+                    const hasSchoolKeyword = schoolPatterns.test(line);
+                    const hasYear = /\b(19|20)\d{2}\b/.test(line);
+                    const hasFieldOfStudy = fieldPatterns.test(line);
+                    
+                    // Start a new education entry when we detect a school or degree line
+                    if (hasSchoolKeyword || (hasDegreeKeyword && !currentEdu)) {
+                        // Save previous entry
+                        if (currentEdu && (currentEdu.degree || currentEdu.school)) {
+                            result.education.push(currentEdu);
+                        }
+                        
+                        currentEdu = {
+                            degree: '',
+                            school: '',
+                            dates: '',
+                            details: ''
+                        };
+                        
+                        // If line has school keyword, it's the school
+                        if (hasSchoolKeyword) {
+                            // Extract school name (might also contain degree info)
+                            if (hasDegreeKeyword) {
+                                // Line has both - try to split them
+                                // Common format: "Bachelor of Science, Stanford University" or "Stanford University - BS Computer Science"
+                                const parts = line.split(/[,\-–—\|]/);
+                                parts.forEach(part => {
+                                    const trimmedPart = part.trim();
+                                    if (schoolPatterns.test(trimmedPart)) {
+                                        currentEdu.school = trimmedPart;
+                                    } else if (degreePatterns.test(trimmedPart) || hasFieldOfStudy) {
+                                        currentEdu.degree = trimmedPart;
+                                    }
+                                });
+                                // If we couldn't split, put it in school
+                                if (!currentEdu.school) {
+                                    currentEdu.school = line;
+                                }
+                            } else {
+                                currentEdu.school = line;
+                            }
+                        } else if (hasDegreeKeyword) {
+                            currentEdu.degree = line;
+                        }
+                        
+                        // Extract year
+                        const yearMatch = line.match(/\b(19|20)\d{2}\b/g);
+                        if (yearMatch) {
+                            currentEdu.dates = yearMatch.join(' - ');
+                        }
+                        
+                    } else if (currentEdu) {
+                        // Continue filling current education entry
+                        if (!currentEdu.school && hasSchoolKeyword) {
+                            currentEdu.school = line;
+                        } else if (!currentEdu.degree && (hasDegreeKeyword || hasFieldOfStudy)) {
+                            currentEdu.degree = line;
+                        } else if (hasYear && !currentEdu.dates) {
+                            const yearMatch = line.match(/\b(19|20)\d{2}\b/g);
+                            if (yearMatch) {
+                                currentEdu.dates = yearMatch.join(' - ');
+                            }
+                        } else if (line.toLowerCase().includes('gpa') || line.toLowerCase().includes('honor') || line.toLowerCase().includes('cum laude') || line.toLowerCase().includes('dean')) {
+                            currentEdu.details += line + ' ';
+                        } else if (!currentEdu.degree && line.length > 5 && line.length < 100) {
+                            // If we still don't have a degree, this might be it
+                            if (hasFieldOfStudy) {
+                                currentEdu.degree = line;
+                            }
+                        }
+                    }
+                });
+                
+                // Don't forget the last entry
+                if (currentEdu && (currentEdu.degree || currentEdu.school)) {
+                    result.education.push(currentEdu);
+                }
+                
+                // Post-process: If degree contains school name but school is empty, try to fix
+                result.education.forEach(edu => {
+                    if (edu.degree && !edu.school && schoolPatterns.test(edu.degree)) {
+                        // The "degree" field actually contains school name
+                        edu.school = edu.degree;
+                        edu.degree = '';
+                    }
+                    // Clean up
+                    edu.degree = edu.degree.trim();
+                    edu.school = edu.school.trim();
+                    edu.details = edu.details.trim();
+                });
+                
+                console.log('Parsed education:', result.education.length, 'entries');
+                result.education.forEach((edu, i) => {
+                    console.log(`Education ${i + 1}:`, edu);
+                });
+            }
+
+            // ============ STEP 6: Parse Skills ============
+            if (sections.skills && sections.skills.length > 0) {
+                const skillText = sections.skills.join(' ');
+                // Clean up and join skills
+                result.skills.technical = skillText
+                    .replace(/[•\-\*\|]/g, ',')
+                    .replace(/\s+/g, ' ')
+                    .replace(/,+/g, ', ')
+                    .trim();
+                console.log('Parsed skills:', result.skills.technical.substring(0, 100) + '...');
+            }
+
+            // ============ STEP 7: Apply the parsed data ============
+            console.log('=== FINAL PARSED RESULT ===');
+            console.log('Name:', result.name);
+            console.log('Email:', result.email);
+            console.log('Phone:', result.phone);
+            console.log('Experience count:', result.experience.length);
+            console.log('Education count:', result.education.length);
+            
+            applyParsedData(result);
+            hideLoading();
+            showToast('Resume parsed! Please review extracted details.');
+        }
+
+        // Resume Preview
+        function renderPreview() {
+            collectFormData();
+            const preview = document.getElementById('resumePreview');
+            
+            preview.innerHTML = `
+                <div class="max-w-[8.5in] mx-auto p-8 bg-white" style="font-size: 11pt; line-height: 1.4;">
+                    <!-- Header -->
+                    <div class="text-center mb-6 border-b-2 border-gray-800 pb-4">
+                        <h1 class="text-2xl font-bold text-gray-900 mb-1">${resumeData.contact.name || 'Your Name'}</h1>
+                        <p class="text-sm text-gray-600">
+                            ${[
+                                resumeData.contact.email,
+                                resumeData.contact.phone,
+                                resumeData.contact.location
+                            ].filter(Boolean).join(' | ')}
+                        </p>
+                        ${resumeData.contact.linkedin || resumeData.contact.portfolio ? `
+                            <p class="text-sm text-gray-600">
+                                ${[resumeData.contact.linkedin, resumeData.contact.portfolio].filter(Boolean).join(' | ')}
+                            </p>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- Summary -->
+                    ${resumeData.summary ? `
+                        <div class="mb-5">
+                            <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wide border-b border-gray-400 mb-2">Professional Summary</h2>
+                            <p class="text-gray-700">${resumeData.summary}</p>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Experience -->
+                    ${resumeData.experience.length > 0 && resumeData.experience[0].title ? `
+                        <div class="mb-5">
+                            <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wide border-b border-gray-400 mb-2">Professional Experience</h2>
+                            ${resumeData.experience.map(exp => `
+                                <div class="mb-4">
+                                    <div class="flex justify-between items-baseline">
+                                        <h3 class="font-bold text-gray-900">${exp.title || ''}</h3>
+                                        <span class="text-sm text-gray-600">${exp.dates || ''}</span>
+                                    </div>
+                                    <div class="flex justify-between items-baseline">
+                                        <p class="text-gray-700 italic">${exp.company || ''}</p>
+                                        <span class="text-sm text-gray-600">${exp.location || ''}</span>
+                                    </div>
+                                    <div class="mt-1 text-gray-700">
+                                        ${(exp.bullets || '').split('\n').filter(b => b.trim()).map(bullet => 
+                                            `<p class="ml-4">${bullet.trim()}</p>`
+                                        ).join('')}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Education -->
+                    ${resumeData.education.length > 0 && resumeData.education[0].degree ? `
+                        <div class="mb-5">
+                            <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wide border-b border-gray-400 mb-2">Education</h2>
+                            ${resumeData.education.map(edu => `
+                                <div class="mb-2">
+                                    <div class="flex justify-between items-baseline">
+                                        <h3 class="font-bold text-gray-900">${edu.degree || ''}</h3>
+                                        <span class="text-sm text-gray-600">${edu.dates || ''}</span>
+                                    </div>
+                                    <p class="text-gray-700">${edu.school || ''}</p>
+                                    ${edu.details ? `<p class="text-sm text-gray-600">${edu.details}</p>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Skills -->
+                    ${resumeData.skills.technical || resumeData.skills.soft || resumeData.skills.tools ? `
+                        <div class="mb-5">
+                            <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wide border-b border-gray-400 mb-2">Skills</h2>
+                            ${resumeData.skills.technical ? `<p class="text-gray-700 mb-1"><strong>Technical:</strong> ${resumeData.skills.technical}</p>` : ''}
+                            ${resumeData.skills.soft ? `<p class="text-gray-700 mb-1"><strong>Soft Skills:</strong> ${resumeData.skills.soft}</p>` : ''}
+                            ${resumeData.skills.tools ? `<p class="text-gray-700"><strong>Tools:</strong> ${resumeData.skills.tools}</p>` : ''}
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Projects -->
+                    ${resumeData.projects.length > 0 && resumeData.projects[0].name ? `
+                        <div class="mb-5">
+                            <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wide border-b border-gray-400 mb-2">Projects</h2>
+                            ${resumeData.projects.map(proj => `
+                                <div class="mb-2">
+                                    <h3 class="font-bold text-gray-900">${proj.name}</h3>
+                                    ${proj.tech ? `<p class="text-sm text-gray-600">Technologies: ${proj.tech}</p>` : ''}
+                                    ${proj.description ? `<p class="text-gray-700">${proj.description}</p>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Certifications -->
+                    ${resumeData.certifications.length > 0 && resumeData.certifications[0]?.name ? `
+                        <div class="mb-5">
+                            <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wide border-b border-gray-400 mb-2">Certifications</h2>
+                            <ul class="text-gray-700">
+                                ${resumeData.certifications.map(cert => 
+                                    `<li>${cert.name}${cert.issuer ? ` - ${cert.issuer}` : ''}${cert.date ? ` (${cert.date})` : ''}</li>`
+                                ).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Languages -->
+                    ${resumeData.languages.length > 0 && resumeData.languages[0]?.language ? `
+                        <div class="mb-5">
+                            <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wide border-b border-gray-400 mb-2">Languages</h2>
+                            <p class="text-gray-700">
+                                ${resumeData.languages.map(lang => 
+                                    `${lang.language}${lang.proficiency ? ` (${lang.proficiency})` : ''}`
+                                ).join(', ')}
+                            </p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // ATS Scoring with comprehensive section-by-section analysis
+        function calculateATSScore() {
+            collectFormData();
+            
+            // Update the display of target role and industry
+            document.getElementById('atsTargetRole').textContent = resumeData.targetRole || 'Not set';
+            document.getElementById('atsIndustry').textContent = resumeData.industry || 'Not set';
+            
+            if (!resumeData.targetRole || !resumeData.industry) {
+                showToast('Please set your Target Job Title and Industry first!');
+                switchTab('editor');
+                return;
+            }
+
+            showLoading('Analyzing your resume for ATS compliance...');
+
+            // Section-by-section analysis
+            const sectionAnalysis = {};
+            let totalIssues = 0;
+            let totalPassed = 0;
+
+            // ============ 1. CONTACT INFORMATION ANALYSIS ============
+            const contactChecks = [];
+            if (resumeData.contact.name && resumeData.contact.name.length > 2) {
+                contactChecks.push({ passed: true, message: 'Full name is present' });
+                totalPassed++;
+            } else {
+                contactChecks.push({ passed: false, message: 'Full name is missing or too short' });
+                totalIssues++;
+            }
+            
+            if (resumeData.contact.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resumeData.contact.email)) {
+                contactChecks.push({ passed: true, message: 'Valid email address provided' });
+                totalPassed++;
+            } else {
+                contactChecks.push({ passed: false, message: 'Email address is missing or invalid' });
+                totalIssues++;
+            }
+            
+            if (resumeData.contact.phone && resumeData.contact.phone.replace(/\D/g, '').length >= 10) {
+                contactChecks.push({ passed: true, message: 'Phone number is present' });
+                totalPassed++;
+            } else {
+                contactChecks.push({ passed: false, message: 'Phone number is missing or incomplete' });
+                totalIssues++;
+            }
+            
+            if (resumeData.contact.location) {
+                contactChecks.push({ passed: true, message: 'Location is provided' });
+                totalPassed++;
+            } else {
+                contactChecks.push({ passed: false, message: 'Location (City, State) is missing - many ATS systems require this' });
+                totalIssues++;
+            }
+            
+            if (resumeData.contact.linkedin) {
+                contactChecks.push({ passed: true, message: 'LinkedIn profile URL included' });
+                totalPassed++;
+            } else {
+                contactChecks.push({ passed: false, message: 'LinkedIn URL is recommended for professional roles', severity: 'warning' });
+            }
+            
+            sectionAnalysis.contact = {
+                name: 'Contact Information',
+                icon: '👤',
+                checks: contactChecks,
+                score: Math.round((contactChecks.filter(c => c.passed).length / contactChecks.length) * 100)
+            };
+
+            // ============ 2. PROFESSIONAL SUMMARY ANALYSIS ============
+            const summaryChecks = [];
+            const summary = resumeData.summary || '';
+            const summaryWords = summary.split(/\s+/).filter(w => w.length > 0);
+            
+            if (summary.length > 0) {
+                summaryChecks.push({ passed: true, message: 'Professional summary is present' });
+                totalPassed++;
+            } else {
+                summaryChecks.push({ passed: false, message: 'Professional summary is missing - this is critical for ATS' });
+                totalIssues++;
+            }
+            
+            if (summaryWords.length >= 40 && summaryWords.length <= 60) {
+                summaryChecks.push({ passed: true, message: `Word count is optimal (${summaryWords.length} words)` });
+                totalPassed++;
+            } else if (summaryWords.length < 40) {
+                summaryChecks.push({ passed: false, message: `Summary is too short (${summaryWords.length} words) - aim for 40-60 words` });
+                totalIssues++;
+            } else {
+                summaryChecks.push({ passed: false, message: `Summary is too long (${summaryWords.length} words) - aim for 40-60 words`, severity: 'warning' });
+            }
+            
+            if (!ATS_RULES.firstPersonPronouns.test(summary)) {
+                summaryChecks.push({ passed: true, message: 'No first-person pronouns detected' });
+                totalPassed++;
+            } else {
+                summaryChecks.push({ passed: false, message: 'Contains first-person pronouns (I, me, my) - remove these for ATS' });
+                totalIssues++;
+            }
+            
+            const fillerInSummary = ATS_RULES.fillerPhrases.filter(p => summary.toLowerCase().includes(p));
+            if (fillerInSummary.length === 0) {
+                summaryChecks.push({ passed: true, message: 'No filler phrases detected' });
+                totalPassed++;
+            } else {
+                summaryChecks.push({ passed: false, message: `Contains filler phrases: "${fillerInSummary.join('", "')}"` });
+                totalIssues++;
+            }
+            
+            // Check for target role keywords
+            const targetRoleWords = resumeData.targetRole.toLowerCase().split(/\s+/);
+            const summaryLower = summary.toLowerCase();
+            const roleKeywordsInSummary = targetRoleWords.filter(w => w.length > 3 && summaryLower.includes(w));
+            if (roleKeywordsInSummary.length > 0) {
+                summaryChecks.push({ passed: true, message: `Contains target role keywords: ${roleKeywordsInSummary.join(', ')}` });
+                totalPassed++;
+            } else {
+                summaryChecks.push({ passed: false, message: `Missing target role keywords from "${resumeData.targetRole}"` });
+                totalIssues++;
+            }
+            
+            sectionAnalysis.summary = {
+                name: 'Professional Summary',
+                icon: '📝',
+                checks: summaryChecks,
+                score: Math.round((summaryChecks.filter(c => c.passed).length / summaryChecks.length) * 100)
+            };
+
+            // ============ 3. WORK EXPERIENCE ANALYSIS ============
+            const experienceChecks = [];
+            const validExperiences = resumeData.experience.filter(e => e.title || e.company);
+            
+            if (validExperiences.length > 0) {
+                experienceChecks.push({ passed: true, message: `${validExperiences.length} work experience entries found` });
+                totalPassed++;
+            } else {
+                experienceChecks.push({ passed: false, message: 'No work experience entries found - this is critical' });
+                totalIssues++;
+            }
+            
+            // Analyze each experience entry
+            let totalBullets = 0;
+            let bulletsWithActionVerbs = 0;
+            let bulletsWithMetrics = 0;
+            let bulletsTooLong = 0;
+            let bulletsWithPronouns = 0;
+            
+            validExperiences.forEach((exp, idx) => {
+                const bullets = (exp.bullets || '').split('\n').filter(b => b.trim());
+                totalBullets += bullets.length;
+                
+                bullets.forEach(bullet => {
+                    const cleanBullet = bullet.replace(/^[•\-\*]\s*/, '').trim();
+                    const words = cleanBullet.split(/\s+/);
+                    
+                    // Check action verb
+                    const firstWord = words[0] || '';
+                    if (ATS_RULES.actionVerbs.some(v => v.toLowerCase() === firstWord.toLowerCase())) {
+                        bulletsWithActionVerbs++;
+                    }
+                    
+                    // Check metrics
+                    if (/\d+%|\$[\d,]+|\d+\s*(x|users|customers|clients|projects|team|employees|million|thousand|k\b|hours|days|weeks|months)/i.test(cleanBullet)) {
+                        bulletsWithMetrics++;
+                    }
+                    
+                    // Check length
+                    if (words.length > 25) {
+                        bulletsTooLong++;
+                    }
+                    
+                    // Check pronouns
+                    if (ATS_RULES.firstPersonPronouns.test(cleanBullet)) {
+                        bulletsWithPronouns++;
+                    }
+                });
+                
+                // Check for dates
+                if (!exp.dates) {
+                    experienceChecks.push({ passed: false, message: `Experience #${idx + 1} (${exp.title || 'Untitled'}) is missing dates` });
+                    totalIssues++;
+                }
+            });
+            
+            // Action verbs analysis
+            if (totalBullets > 0) {
+                const actionVerbPercent = Math.round((bulletsWithActionVerbs / totalBullets) * 100);
+                if (actionVerbPercent >= 80) {
+                    experienceChecks.push({ passed: true, message: `${actionVerbPercent}% of bullets start with action verbs (excellent)` });
+                    totalPassed++;
+                } else if (actionVerbPercent >= 50) {
+                    experienceChecks.push({ passed: false, message: `Only ${actionVerbPercent}% of bullets start with action verbs - aim for 80%+`, severity: 'warning' });
+                } else {
+                    experienceChecks.push({ passed: false, message: `Only ${actionVerbPercent}% of bullets start with action verbs - this needs improvement` });
+                    totalIssues++;
+                }
+                
+                // Metrics analysis
+                const metricsPercent = Math.round((bulletsWithMetrics / totalBullets) * 100);
+                if (metricsPercent >= 60) {
+                    experienceChecks.push({ passed: true, message: `${metricsPercent}% of bullets contain quantifiable metrics (excellent)` });
+                    totalPassed++;
+                } else if (metricsPercent >= 30) {
+                    experienceChecks.push({ passed: false, message: `Only ${metricsPercent}% of bullets have metrics - add more numbers and percentages`, severity: 'warning' });
+                } else {
+                    experienceChecks.push({ passed: false, message: `Only ${metricsPercent}% of bullets have metrics - ATS and recruiters look for quantified achievements` });
+                    totalIssues++;
+                }
+                
+                // Length check
+                if (bulletsTooLong === 0) {
+                    experienceChecks.push({ passed: true, message: 'All bullets are within 25-word limit' });
+                    totalPassed++;
+                } else {
+                    experienceChecks.push({ passed: false, message: `${bulletsTooLong} bullets exceed 25 words - shorten for better readability` });
+                    totalIssues++;
+                }
+                
+                // Pronouns check
+                if (bulletsWithPronouns === 0) {
+                    experienceChecks.push({ passed: true, message: 'No first-person pronouns in experience bullets' });
+                    totalPassed++;
+                } else {
+                    experienceChecks.push({ passed: false, message: `${bulletsWithPronouns} bullets contain first-person pronouns - remove them` });
+                    totalIssues++;
+                }
+            }
+            
+            sectionAnalysis.experience = {
+                name: 'Work Experience',
+                icon: '💼',
+                checks: experienceChecks,
+                score: experienceChecks.length > 0 ? Math.round((experienceChecks.filter(c => c.passed).length / experienceChecks.length) * 100) : 0
+            };
+
+            // ============ 4. EDUCATION ANALYSIS ============
+            const educationChecks = [];
+            const validEducation = resumeData.education.filter(e => e.degree || e.school);
+            
+            if (validEducation.length > 0) {
+                educationChecks.push({ passed: true, message: `${validEducation.length} education entries found` });
+                totalPassed++;
+                
+                validEducation.forEach((edu, idx) => {
+                    if (edu.degree && edu.school) {
+                        educationChecks.push({ passed: true, message: `Entry #${idx + 1}: Both degree and institution are present` });
+                        totalPassed++;
+                    } else if (!edu.degree) {
+                        educationChecks.push({ passed: false, message: `Entry #${idx + 1}: Degree/qualification is missing` });
+                        totalIssues++;
+                    } else if (!edu.school) {
+                        educationChecks.push({ passed: false, message: `Entry #${idx + 1}: Institution name is missing` });
+                        totalIssues++;
+                    }
+                });
+            } else {
+                educationChecks.push({ passed: false, message: 'No education entries found - add at least one', severity: 'warning' });
+            }
+            
+            sectionAnalysis.education = {
+                name: 'Education',
+                icon: '🎓',
+                checks: educationChecks,
+                score: educationChecks.length > 0 ? Math.round((educationChecks.filter(c => c.passed).length / educationChecks.length) * 100) : 0
+            };
+
+            // ============ 5. SKILLS ANALYSIS ============
+            const skillsChecks = [];
+            const technicalSkills = resumeData.skills.technical || '';
+            const softSkills = resumeData.skills.soft || '';
+            const tools = resumeData.skills.tools || '';
+            
+            if (technicalSkills) {
+                const techSkillCount = technicalSkills.split(/[,;]/).filter(s => s.trim()).length;
+                if (techSkillCount >= 8) {
+                    skillsChecks.push({ passed: true, message: `${techSkillCount} technical skills listed (good coverage)` });
+                    totalPassed++;
+                } else {
+                    skillsChecks.push({ passed: false, message: `Only ${techSkillCount} technical skills - consider adding more relevant to ${resumeData.targetRole}`, severity: 'warning' });
+                }
+            } else {
+                skillsChecks.push({ passed: false, message: 'Technical skills section is empty - this is critical for ATS keyword matching' });
+                totalIssues++;
+            }
+            
+            if (softSkills) {
+                skillsChecks.push({ passed: true, message: 'Soft skills are included' });
+                totalPassed++;
+            } else {
+                skillsChecks.push({ passed: false, message: 'Consider adding soft skills relevant to your industry', severity: 'warning' });
+            }
+            
+            if (tools) {
+                skillsChecks.push({ passed: true, message: 'Tools & platforms section is filled' });
+                totalPassed++;
+            } else {
+                skillsChecks.push({ passed: false, message: 'Tools section is empty - add software/platforms you work with', severity: 'warning' });
+            }
+            
+            // Check for industry-relevant keywords
+            const allSkills = `${technicalSkills} ${softSkills} ${tools}`.toLowerCase();
+            const industryLower = resumeData.industry.toLowerCase();
+            if (allSkills.includes(industryLower) || industryLower.split(/\s+/).some(w => w.length > 3 && allSkills.includes(w))) {
+                skillsChecks.push({ passed: true, message: `Skills include industry-relevant keywords for "${resumeData.industry}"` });
+                totalPassed++;
+            } else {
+                skillsChecks.push({ passed: false, message: `Consider adding industry-specific skills for "${resumeData.industry}"` });
+                totalIssues++;
+            }
+            
+            sectionAnalysis.skills = {
+                name: 'Skills',
+                icon: '🛠️',
+                checks: skillsChecks,
+                score: skillsChecks.length > 0 ? Math.round((skillsChecks.filter(c => c.passed).length / skillsChecks.length) * 100) : 0
+            };
+
+            // ============ 6. PROJECTS ANALYSIS ============
+            const projectChecks = [];
+            const validProjects = resumeData.projects.filter(p => p.name);
+            
+            if (validProjects.length > 0) {
+                projectChecks.push({ passed: true, message: `${validProjects.length} projects included` });
+                totalPassed++;
+                
+                validProjects.forEach((proj, idx) => {
+                    if (proj.tech) {
+                        projectChecks.push({ passed: true, message: `Project "${proj.name}" has technologies listed` });
+                        totalPassed++;
+                    }
+                    if (proj.description && proj.description.length > 20) {
+                        projectChecks.push({ passed: true, message: `Project "${proj.name}" has description` });
+                        totalPassed++;
+                    }
+                });
+            } else {
+                projectChecks.push({ passed: false, message: 'Consider adding projects to showcase practical skills', severity: 'warning' });
+            }
+            
+            sectionAnalysis.projects = {
+                name: 'Projects',
+                icon: '🚀',
+                checks: projectChecks,
+                score: projectChecks.length > 0 ? Math.round((projectChecks.filter(c => c.passed).length / projectChecks.length) * 100) : 0
+            };
+
+            // ============ 7. OVERALL FORMAT ANALYSIS ============
+            const formatChecks = [];
+            const fullResumeText = [
+                resumeData.summary,
+                resumeData.skills.technical,
+                resumeData.skills.soft,
+                resumeData.skills.tools,
+                ...resumeData.experience.map(e => e.bullets || ''),
+                ...resumeData.projects.map(p => p.description || '')
+            ].join(' ');
+            
+            // Check for forbidden characters
+            const specialChars = fullResumeText.match(/[^\w\s.,;:!?()'\-–—@#$%&*+=/\\|<>[\]{}""''•·]/g);
+            if (!specialChars || specialChars.length === 0) {
+                formatChecks.push({ passed: true, message: 'No problematic special characters detected' });
+                totalPassed++;
+            } else {
+                const uniqueChars = [...new Set(specialChars)].slice(0, 5);
+                formatChecks.push({ passed: false, message: `Found special characters that may confuse ATS: ${uniqueChars.join(' ')}` });
+                totalIssues++;
+            }
+            
+            // Check overall length
+            const totalWords = fullResumeText.split(/\s+/).filter(w => w.length > 0).length;
+            if (totalWords >= 300 && totalWords <= 800) {
+                formatChecks.push({ passed: true, message: `Resume length is optimal (${totalWords} words)` });
+                totalPassed++;
+            } else if (totalWords < 300) {
+                formatChecks.push({ passed: false, message: `Resume may be too short (${totalWords} words) - aim for 300-800 words` });
+                totalIssues++;
+            } else {
+                formatChecks.push({ passed: false, message: `Resume may be too long (${totalWords} words) - consider condensing`, severity: 'warning' });
+            }
+            
+            sectionAnalysis.format = {
+                name: 'ATS Format Compliance',
+                icon: '✅',
+                checks: formatChecks,
+                score: formatChecks.length > 0 ? Math.round((formatChecks.filter(c => c.passed).length / formatChecks.length) * 100) : 0
+            };
+
+            // Calculate overall score
+            const sectionScores = Object.values(sectionAnalysis).map(s => s.score);
+            const overallScore = Math.round(sectionScores.reduce((a, b) => a + b, 0) / sectionScores.length);
+
+            hideLoading();
+            renderATSResults({
+                overallScore,
+                sectionAnalysis,
+                totalPassed,
+                totalIssues,
+                targetRole: resumeData.targetRole,
+                industry: resumeData.industry
+            });
+        }
+
+        function renderATSResults(results) {
+            const container = document.getElementById('atsResults');
+            container.classList.remove('hidden');
+            
+            const getScoreColor = (score) => {
+                if (score >= 80) return 'text-green-600';
+                if (score >= 60) return 'text-yellow-600';
+                return 'text-red-600';
+            };
+
+            const getScoreBg = (score) => {
+                if (score >= 80) return 'bg-green-500';
+                if (score >= 60) return 'bg-yellow-500';
+                return 'bg-red-500';
+            };
+
+            const getScoreRingColor = (score) => {
+                if (score >= 80) return '#22c55e';
+                if (score >= 60) return '#eab308';
+                return '#ef4444';
+            };
+
+            const renderCheckItem = (check) => {
+                if (check.passed) {
+                    return `
+                        <div class="flex items-start gap-2 py-1">
+                            <svg class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="text-sm text-green-700">${check.message}</span>
+                        </div>
+                    `;
+                } else if (check.severity === 'warning') {
+                    return `
+                        <div class="flex items-start gap-2 py-1">
+                            <svg class="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                            </svg>
+                            <span class="text-sm text-yellow-700">${check.message}</span>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="flex items-start gap-2 py-1">
+                            <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span class="text-sm text-red-700">${check.message}</span>
+                        </div>
+                    `;
+                }
+            };
+
+            const renderSectionCard = (section) => {
+                const passedCount = section.checks.filter(c => c.passed).length;
+                const totalCount = section.checks.length;
+                
+                return `
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                        <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">${section.icon}</span>
+                                <div>
+                                    <h3 class="font-semibold text-gray-800">${section.name}</h3>
+                                    <p class="text-xs text-gray-500">${passedCount}/${totalCount} checks passed</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div class="h-full ${getScoreBg(section.score)} rounded-full" style="width: ${section.score}%"></div>
+                                </div>
+                                <span class="text-sm font-bold ${getScoreColor(section.score)}">${section.score}%</span>
+                            </div>
+                        </div>
+                        <div class="p-4 bg-gray-50">
+                            ${section.checks.map(renderCheckItem).join('')}
+                        </div>
+                    </div>
+                `;
+            };
+
+            container.innerHTML = `
+                <!-- Overall Score Header -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <div class="flex flex-col md:flex-row items-center gap-6">
+                        <!-- Score Circle -->
+                        <div class="relative w-40 h-40 flex-shrink-0">
+                            <svg class="w-40 h-40 transform -rotate-90">
+                                <circle cx="80" cy="80" r="70" stroke="#e5e7eb" stroke-width="12" fill="none"/>
+                                <circle cx="80" cy="80" r="70" stroke="${getScoreRingColor(results.overallScore)}" 
+                                        stroke-width="12" fill="none" 
+                                        stroke-dasharray="440" 
+                                        stroke-dashoffset="${440 - (440 * results.overallScore / 100)}" 
+                                        stroke-linecap="round"
+                                        class="ats-score-ring"/>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span class="text-5xl font-bold ${getScoreColor(results.overallScore)}">${results.overallScore}</span>
+                                <span class="text-sm text-gray-500">out of 100</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Score Summary -->
+                        <div class="flex-1 text-center md:text-left">
+                            <h2 class="text-2xl font-bold text-gray-800 mb-2">
+                                ${results.overallScore >= 80 ? '🎉 Excellent ATS Compatibility!' :
+                                  results.overallScore >= 60 ? '👍 Good, With Room for Improvement' :
+                                  '⚠️ Needs Improvement'}
+                            </h2>
+                            <p class="text-gray-600 mb-4">
+                                ${results.overallScore >= 80 ? 
+                                    'Your resume is well-optimized for Applicant Tracking Systems. It should pass most ATS filters successfully.' :
+                                  results.overallScore >= 60 ? 
+                                    'Your resume has good fundamentals but could benefit from some optimizations to improve ATS compatibility.' :
+                                    'Your resume may struggle to pass ATS filters. Review the section-by-section analysis below for specific improvements.'}
+                            </p>
+                            <div class="flex flex-wrap justify-center md:justify-start gap-4">
+                                <div class="bg-green-50 px-4 py-2 rounded-lg">
+                                    <span class="text-green-700 font-semibold">${results.totalPassed}</span>
+                                    <span class="text-green-600 text-sm ml-1">Checks Passed</span>
+                                </div>
+                                <div class="bg-red-50 px-4 py-2 rounded-lg">
+                                    <span class="text-red-700 font-semibold">${results.totalIssues}</span>
+                                    <span class="text-red-600 text-sm ml-1">Issues Found</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Target Info -->
+                    <div class="mt-6 pt-6 border-t border-gray-100 flex flex-wrap gap-4">
+                        <div class="bg-indigo-50 px-4 py-2 rounded-lg">
+                            <span class="text-xs text-indigo-600 uppercase font-medium">Target Role</span>
+                            <p class="text-indigo-900 font-semibold">${results.targetRole}</p>
+                        </div>
+                        <div class="bg-purple-50 px-4 py-2 rounded-lg">
+                            <span class="text-xs text-purple-600 uppercase font-medium">Industry</span>
+                            <p class="text-purple-900 font-semibold">${results.industry}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section-by-Section Analysis -->
+                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                    </svg>
+                    Section-by-Section Analysis
+                </h3>
+                
+                <div class="grid md:grid-cols-2 gap-4 mb-6">
+                    ${Object.values(results.sectionAnalysis).map(renderSectionCard).join('')}
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white">
+                    <h3 class="text-lg font-bold mb-2">🚀 Quick Actions to Improve Your Score</h3>
+                    <p class="text-indigo-100 text-sm mb-4">Use the AI-powered optimization features to fix issues automatically:</p>
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="switchTab('editor'); generateAllSections();" class="bg-white text-indigo-600 px-4 py-2 rounded-lg font-medium hover:bg-indigo-50 transition flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                            Regenerate All with AI
+                        </button>
+                        <button onclick="switchTab('editor');" class="bg-indigo-400 bg-opacity-30 text-white px-4 py-2 rounded-lg font-medium hover:bg-opacity-50 transition flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                            Edit Sections Manually
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Detailed Recommendations -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mt-6">
+                    <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <span class="text-xl">💡</span>
+                        Personalized Recommendations
+                    </h3>
+                    <div class="space-y-3">
+                        ${results.totalIssues > 0 ? Object.values(results.sectionAnalysis).filter(s => s.score < 100).map(section => {
+                            const issues = section.checks.filter(c => !c.passed);
+                            if (issues.length === 0) return '';
+                            return `
+                                <div class="border-l-4 ${section.score >= 60 ? 'border-yellow-400 bg-yellow-50' : 'border-red-400 bg-red-50'} p-4 rounded-r-lg">
+                                    <h4 class="font-medium text-gray-800 flex items-center gap-2">
+                                        <span>${section.icon}</span>
+                                        ${section.name} (${section.score}%)
+                                    </h4>
+                                    <ul class="mt-2 space-y-1">
+                                        ${issues.map(issue => `
+                                            <li class="text-sm text-gray-600 flex items-start gap-2">
+                                                <span class="text-gray-400">•</span>
+                                                ${issue.message}
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                            `;
+                        }).join('') : `
+                            <div class="border-l-4 border-green-400 bg-green-50 p-4 rounded-r-lg">
+                                <h4 class="font-medium text-green-800">🎉 Great job!</h4>
+                                <p class="text-sm text-green-700 mt-1">Your resume passes all major ATS compliance checks. Consider adding more quantifiable metrics to make an even stronger impression.</p>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Export Functions
+        function downloadPDF() {
+            collectFormData();
+            renderPreview();
+            
+            showLoading('Generating PDF...');
+            
+            const element = document.getElementById('resumePreview');
+            const opt = {
+                margin: 0.5,
+                filename: `${resumeData.contact.name || 'Resume'}_Resume.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+            
+            html2pdf().set(opt).from(element).save().then(() => {
+                hideLoading();
+                showToast('PDF downloaded successfully!');
+            });
+        }
+
+        function downloadDOCX() {
+            collectFormData();
+            showLoading('Generating DOCX...');
+            
+            const { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } = docx;
+            
+            const children = [];
+            
+            // Header - Name
+            children.push(new Paragraph({
+                children: [new TextRun({ text: resumeData.contact.name || 'Your Name', bold: true, size: 32 })],
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 100 }
+            }));
+            
+            // Contact Info
+            const contactParts = [
+                resumeData.contact.email,
+                resumeData.contact.phone,
+                resumeData.contact.location
+            ].filter(Boolean);
+            
+            if (contactParts.length > 0) {
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: contactParts.join(' | '), size: 22 })],
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 200 }
+                }));
+            }
+            
+            // Links
+            const links = [resumeData.contact.linkedin, resumeData.contact.portfolio].filter(Boolean);
+            if (links.length > 0) {
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: links.join(' | '), size: 22 })],
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 300 }
+                }));
+            }
+            
+            // Summary
+            if (resumeData.summary) {
+                children.push(new Paragraph({
+                    text: 'PROFESSIONAL SUMMARY',
+                    heading: HeadingLevel.HEADING_2,
+                    border: { bottom: { style: BorderStyle.SINGLE, size: 6 } },
+                    spacing: { before: 200, after: 100 }
+                }));
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: resumeData.summary, size: 22 })],
+                    spacing: { after: 200 }
+                }));
+            }
+            
+            // Experience
+            if (resumeData.experience.some(e => e.title)) {
+                children.push(new Paragraph({
+                    text: 'PROFESSIONAL EXPERIENCE',
+                    heading: HeadingLevel.HEADING_2,
+                    border: { bottom: { style: BorderStyle.SINGLE, size: 6 } },
+                    spacing: { before: 200, after: 100 }
+                }));
+                
+                resumeData.experience.forEach(exp => {
+                    if (exp.title) {
+                        children.push(new Paragraph({
+                            children: [
+                                new TextRun({ text: exp.title, bold: true, size: 24 }),
+                                new TextRun({ text: ` | ${exp.company || ''}`, size: 24 }),
+                                new TextRun({ text: `  ${exp.dates || ''}`, italics: true, size: 22 })
+                            ],
+                            spacing: { before: 150 }
+                        }));
+                        
+                        if (exp.bullets) {
+                            exp.bullets.split('\n').filter(b => b.trim()).forEach(bullet => {
+                                children.push(new Paragraph({
+                                    children: [new TextRun({ text: bullet.replace(/^[•\-\*]\s*/, ''), size: 22 })],
+                                    bullet: { level: 0 },
+                                    spacing: { before: 50 }
+                                }));
+                            });
+                        }
+                    }
+                });
+            }
+            
+            // Education
+            if (resumeData.education.some(e => e.degree)) {
+                children.push(new Paragraph({
+                    text: 'EDUCATION',
+                    heading: HeadingLevel.HEADING_2,
+                    border: { bottom: { style: BorderStyle.SINGLE, size: 6 } },
+                    spacing: { before: 200, after: 100 }
+                }));
+                
+                resumeData.education.forEach(edu => {
+                    if (edu.degree) {
+                        children.push(new Paragraph({
+                            children: [
+                                new TextRun({ text: edu.degree, bold: true, size: 24 }),
+                                new TextRun({ text: ` - ${edu.school || ''}`, size: 24 }),
+                                new TextRun({ text: `  ${edu.dates || ''}`, italics: true, size: 22 })
+                            ],
+                            spacing: { before: 100 }
+                        }));
+                        if (edu.details) {
+                            children.push(new Paragraph({
+                                children: [new TextRun({ text: edu.details, size: 22 })],
+                                spacing: { before: 50 }
+                            }));
+                        }
+                    }
+                });
+            }
+            
+            // Skills
+            if (resumeData.skills.technical || resumeData.skills.soft || resumeData.skills.tools) {
+                children.push(new Paragraph({
+                    text: 'SKILLS',
+                    heading: HeadingLevel.HEADING_2,
+                    border: { bottom: { style: BorderStyle.SINGLE, size: 6 } },
+                    spacing: { before: 200, after: 100 }
+                }));
+                
+                if (resumeData.skills.technical) {
+                    children.push(new Paragraph({
+                        children: [
+                            new TextRun({ text: 'Technical: ', bold: true, size: 22 }),
+                            new TextRun({ text: resumeData.skills.technical, size: 22 })
+                        ],
+                        spacing: { before: 50 }
+                    }));
+                }
+                if (resumeData.skills.soft) {
+                    children.push(new Paragraph({
+                        children: [
+                            new TextRun({ text: 'Soft Skills: ', bold: true, size: 22 }),
+                            new TextRun({ text: resumeData.skills.soft, size: 22 })
+                        ],
+                        spacing: { before: 50 }
+                    }));
+                }
+                if (resumeData.skills.tools) {
+                    children.push(new Paragraph({
+                        children: [
+                            new TextRun({ text: 'Tools: ', bold: true, size: 22 }),
+                            new TextRun({ text: resumeData.skills.tools, size: 22 })
+                        ],
+                        spacing: { before: 50 }
+                    }));
+                }
+            }
+            
+            const doc = new Document({
+                sections: [{ properties: {}, children }]
+            });
+            
+            docx.Packer.toBlob(doc).then(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${resumeData.contact.name || 'Resume'}_Resume.docx`;
+                a.click();
+                URL.revokeObjectURL(url);
+                hideLoading();
+                showToast('DOCX downloaded successfully!');
+            });
+        }
+
+        // Utility Functions
+        function showLoading(text = 'Loading...') {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function showStatus(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.className = `text-center py-2 rounded-lg ${type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`;
+            el.classList.remove('hidden');
+            
+            setTimeout(() => el.classList.add('hidden'), 3000);
+        }
+
+        function exportData() {
+            collectFormData();
+            const data = JSON.stringify({ resumeData, settings }, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'resume_backup.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Data exported successfully!');
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
+                localStorage.removeItem('resumeData');
+                localStorage.removeItem('resumeBuilderSettings');
+                location.reload();
+            }
+        }
+
+        // Auto-save on input changes
+        document.addEventListener('input', (e) => {
+            if (e.target.matches('input, textarea, select')) {
+                clearTimeout(window.saveTimeout);
+                window.saveTimeout = setTimeout(saveResumeData, 2000);
+            }
+        });
+    </script>
+</body>
+</html>
