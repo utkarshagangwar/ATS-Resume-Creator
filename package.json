@@ -4,8 +4,7 @@
   "description": "Secure backend proxy for ATS Resume Builder",
   "main": "server.js",
   "scripts": {
-    "dev": "next dev",
-    "local-server": "node server.js"
+    "dev": "next dev"
   },
   
   "dependencies": {
