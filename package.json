@@ -4,9 +4,12 @@
   "description": "Secure backend proxy for ATS Resume Builder",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "next dev",
+    "build": "next build",
+    "vercel-build": "next build",
+    "local-server": "node server.js"
   },
+  
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
