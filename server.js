@@ -9,7 +9,7 @@ const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
-require('dotenv').config();
+// require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 3001;
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
-
+console.log("API Key loaded?", !!process.env.OPENROUTER_API_KEY);
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS 
@@ -348,7 +348,6 @@ OUTPUT: Valid JSON only, nothing else.`;
             headers: {
                 'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
                 'Content-Type': 'application/json',
-                'HTTP-Referer': ALLOWED_ORIGINS[0],
                 'X-Title': 'ATS Resume Builder'
             },
             body: JSON.stringify({
