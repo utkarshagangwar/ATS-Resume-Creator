@@ -17,7 +17,6 @@ const PORT = process.env.PORT || 3001;
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
-console.log("API Key loaded?", !!process.env.OPENROUTER_API_KEY);
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS 

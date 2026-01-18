@@ -5,8 +5,6 @@
   "main": "server.js",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "vercel-build": "next build",
     "local-server": "node server.js"
   },
   
