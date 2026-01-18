@@ -22,7 +22,7 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS 
     ? process.env.ALLOWED_ORIGINS.split(',') 
-    : ['http://localhost:3000', 'http://localhost:5500', 'http://127.0.0.1:5500'];
+    : ['http://localhost:3000', 'http://localhost:5500', 'http://127.0.0.1:5500', 'https://my-ats-resume.vercel.app'];
 
 // Validate API key is present
 if (!OPENROUTER_API_KEY) {
@@ -43,17 +43,7 @@ app.use(helmet({
 
 // CORS - Restrict to allowed origins
 app.use(cors({
-    origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests in dev)
-        if (!origin) return callback(null, true);
-        
-        if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            console.warn(`⚠️ Blocked request from unauthorized origin: ${origin}`);
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    origin: ALLOWED_ORIGINS,
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
@@ -224,7 +214,6 @@ app.post('/api/chat', async (req, res) => {
             headers: {
                 'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
                 'Content-Type': 'application/json',
-                'HTTP-Referer': ALLOWED_ORIGINS[0],
                 'X-Title': 'ATS Resume Builder'
             },
             body: JSON.stringify({
