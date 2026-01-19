@@ -1,19 +1,19 @@
 {
-  "name": "ats-resume-builder-api",
+  "name": "ats-resume-builder",
   "version": "1.0.0",
-  "description": "Secure backend proxy for ATS Resume Builder",
-  "main": "server.js",
+  "description": "ATS-friendly resume builder with AI-powered content generation",
+  "main": "api/index.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "node api/index.js",
+    "dev": "nodemon api/index.js",
+    "vercel-build": "echo 'No build step required'"
   },
   "dependencies": {
-    "@vercel/analytics": "^1.6.1",
     "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "express-rate-limit": "^7.1.5",
-    "helmet": "^7.1.0"
+    "dotenv": "^17.2.3",
+    "express": "^4.22.1",
+    "express-rate-limit": "^7.5.1",
+    "helmet": "^7.2.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
@@ -25,7 +25,8 @@
     "resume",
     "ats",
     "openrouter",
-    "ai"
+    "ai",
+    "career"
   ],
   "license": "MIT"
 }

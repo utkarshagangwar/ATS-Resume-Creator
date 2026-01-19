@@ -1,15 +1,15 @@
 /**
- * ATS Resume Builder - Backend Proxy Server
- * 
- * This server acts as a secure proxy between the frontend and OpenRouter API.
- * The API key is stored in environment variables, never exposed to the client.
+ * ATS Resume Builder - Backend API Server
+ * Vercel Serverless Function (Express)
+ * * This server acts as a secure proxy between the frontend and OpenRouter API.
+ * The API key is stored in Vercel environment variables, never exposed to the client.
  */
 
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
-require('dotenv').config();
+require('dotenv').config(); // Load .env for local testing
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -20,16 +20,6 @@ const PORT = process.env.PORT || 3001;
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['https://my-ats-resume.vercel.app', 'http://localhost:3000', 'http://localhost:5500', 'http://127.0.0.1:5500'];
-
-// Validate API key is present
-if (!OPENROUTER_API_KEY) {
-    console.error('❌ ERROR: OPENROUTER_API_KEY environment variable is not set!');
-    console.error('Please create a .env file with your API key. See .env.example for reference.');
-    process.exit(1);
-}
 
 // =============================================================================
 // MIDDLEWARE
@@ -37,35 +27,26 @@ if (!OPENROUTER_API_KEY) {
 
 // Security headers
 app.use(helmet({
-    contentSecurityPolicy: false, // Disable for development
+    contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false
 }));
 
-// CORS - Restrict to allowed origins
+// CORS - Allow all origins for Vercel deployment
+// We use 'origin: true' to ensure mobile/web/previews all work without issues.
 app.use(cors({
-    origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests in dev)
-        if (!origin) return callback(null, true);
-        
-        if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            console.warn(`⚠️ Blocked request from unauthorized origin: ${origin}`);
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    methods: ['GET', 'POST'],
+    origin: true, 
+    methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
 }));
 
-// Parse JSON bodies
-app.use(express.json({ limit: '1mb' }));
+// Parse JSON bodies (limit increased for large resume text)
+app.use(express.json({ limit: '5mb' }));
 
 // Rate limiting - 100 requests per 15 minutes per IP
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    windowMs: 15 * 60 * 1000,
+    max: 100,
     message: {
         error: 'Too many requests from this IP, please try again after 15 minutes',
         retryAfter: 15
@@ -74,6 +55,7 @@ const limiter = rateLimit({
     legacyHeaders: false,
 });
 
+// Apply rate limiting to all API routes
 app.use('/api/', limiter);
 
 // Request logging
@@ -101,7 +83,6 @@ function validateChatRequest(body) {
             if (!msg.content || typeof msg.content !== 'string') {
                 errors.push(`messages[${index}].content must be a non-empty string`);
             }
-            // Limit content length to prevent abuse
             if (msg.content && msg.content.length > 50000) {
                 errors.push(`messages[${index}].content exceeds maximum length of 50000 characters`);
             }
@@ -112,12 +93,14 @@ function validateChatRequest(body) {
         errors.push('model must be a string');
     }
     
+    // Validate temperature if present
     if (body.temperature !== undefined) {
         if (typeof body.temperature !== 'number' || body.temperature < 0 || body.temperature > 2) {
             errors.push('temperature must be a number between 0 and 2');
         }
     }
     
+    // Validate max_tokens if present
     if (body.max_tokens !== undefined) {
         if (!Number.isInteger(body.max_tokens) || body.max_tokens < 1 || body.max_tokens > 4000) {
             errors.push('max_tokens must be an integer between 1 and 4000');
@@ -138,7 +121,7 @@ app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
         timestamp: new Date().toISOString(),
-        apiConfigured: !!OPENROUTER_API_KEY
+        apiConfigured: !!OPENROUTER_API_KEY && OPENROUTER_API_KEY.length > 10
     });
 });
 
@@ -146,6 +129,13 @@ app.get('/api/health', (req, res) => {
  * Test API connection and get available models
  */
 app.get('/api/models', async (req, res) => {
+    if (!OPENROUTER_API_KEY) {
+        return res.status(500).json({
+            error: 'API key not configured on server',
+            code: 'API_KEY_MISSING'
+        });
+    }
+
     try {
         const response = await fetch(`${OPENROUTER_BASE_URL}/models`, {
             method: 'GET',
@@ -201,6 +191,13 @@ app.get('/api/models', async (req, res) => {
  * Chat completion endpoint - proxies requests to OpenRouter
  */
 app.post('/api/chat', async (req, res) => {
+    if (!OPENROUTER_API_KEY) {
+        return res.status(500).json({
+            error: 'API key not configured on server',
+            code: 'API_KEY_MISSING'
+        });
+    }
+
     // Validate request body
     const validationErrors = validateChatRequest(req.body);
     if (validationErrors.length > 0) {
@@ -217,14 +214,14 @@ app.post('/api/chat', async (req, res) => {
         // Use provided model or default to a free model
         const selectedModel = model || 'meta-llama/llama-3.1-8b-instruct:free';
         
-        console.log(`📤 Sending request to OpenRouter (model: ${selectedModel})`);
+        console.log(`[Chat] Using model: ${selectedModel}`);
         
         const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
                 'Content-Type': 'application/json',
-                'HTTP-Referer': ALLOWED_ORIGINS[0],
+                'HTTP-Referer': process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000',
                 'X-Title': 'ATS Resume Builder'
             },
             body: JSON.stringify({
@@ -246,9 +243,8 @@ app.post('/api/chat', async (req, res) => {
         
         const data = await response.json();
         
-        console.log(`✅ Response received from OpenRouter`);
+        console.log(`[Chat] Response received successfully`);
         
-        // Return only the necessary data
         res.json({
             success: true,
             content: data.choices?.[0]?.message?.content || '',
@@ -269,6 +265,13 @@ app.post('/api/chat', async (req, res) => {
  * Resume parsing endpoint - uses AI to parse resume text
  */
 app.post('/api/parse-resume', async (req, res) => {
+    if (!OPENROUTER_API_KEY) {
+        return res.status(500).json({
+            error: 'API key not configured on server',
+            code: 'API_KEY_MISSING'
+        });
+    }
+
     const { text, model } = req.body;
     
     if (!text || typeof text !== 'string') {
@@ -359,7 +362,7 @@ OUTPUT: Valid JSON only, nothing else.`;
             headers: {
                 'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
                 'Content-Type': 'application/json',
-                'HTTP-Referer': ALLOWED_ORIGINS[0],
+                'HTTP-Referer': process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000',
                 'X-Title': 'ATS Resume Builder'
             },
             body: JSON.stringify({
@@ -439,23 +442,20 @@ app.use((err, req, res, next) => {
 });
 
 // =============================================================================
-// SERVER START
+// SERVER START (Local & Vercel)
 // =============================================================================
 
-app.listen(PORT, () => {
-    console.log('═'.repeat(50));
-    console.log('🚀 ATS Resume Builder API Server');
-    console.log('═'.repeat(50));
-    console.log(`📡 Server running on: http://localhost:${PORT}`);
-    console.log(`🔒 API Key configured: ${OPENROUTER_API_KEY ? 'Yes ✓' : 'No ✗'}`);
-    console.log(`🌐 Allowed origins: ${ALLOWED_ORIGINS.join(', ')}`);
-    console.log('═'.repeat(50));
-    console.log('Available endpoints:');
-    console.log(`  GET  /api/health  - Health check`);
-    console.log(`  GET  /api/models  - List available AI models`);
-    console.log(`  POST /api/chat    - AI chat completion`);
-    console.log(`  POST /api/parse-resume - Parse resume with AI`);
-    console.log('═'.repeat(50));
-});
+// 1. If running LOCALLY (e.g. node api/index.js), this block runs and opens port 3001
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log('═'.repeat(50));
+        console.log('🚀 ATS Resume Builder API Server (Local Mode)');
+        console.log('═'.repeat(50));
+        console.log(`📡 Server running on: http://localhost:${PORT}`);
+        console.log(`🔒 API Key configured: ${OPENROUTER_API_KEY ? 'Yes ✓' : 'No ✗'}`);
+        console.log('═'.repeat(50));
+    });
+}
 
+// 2. If running on VERCEL, this export is used to start the serverless function
 module.exports = app;
