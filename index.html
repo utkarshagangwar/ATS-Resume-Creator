@@ -738,13 +738,6 @@
                     </h2>
                     
                     <div class="space-y-6">
-                        <!-- Backend API URL -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Backend API URL</label>
-                            <input type="text" id="backendUrl" placeholder="http://localhost:3001" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                            <p class="mt-2 text-sm text-gray-500">Your secure backend server URL. API key is stored server-side.</p>
-                        </div>
-
                         <!-- Test Backend Connection -->
                         <div>
                             <button onclick="testBackendConnection()" id="testBackendBtn" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition flex items-center justify-center gap-2">
@@ -800,7 +793,7 @@
                                 </svg>
                                 <div>
                                     <p class="text-sm text-green-800 font-medium">🔒 Secure API Architecture</p>
-                                    <p class="text-xs text-green-700 mt-1">Your OpenRouter API key is stored securely on the backend server, never exposed to the browser. All AI requests are proxied through your backend with rate limiting and input validation.</p>
+                                    <p class="text-xs text-green-700 mt-1">Your OpenRouter API key is stored securely in Vercel environment variables, never exposed to the browser. All AI requests are proxied through serverless functions with input validation.</p>
                                 </div>
                             </div>
                         </div>
@@ -891,12 +884,14 @@
         };
 
         let settings = {
-            backendUrl: 'http://localhost:3001',
             model: 'meta-llama/llama-3.1-8b-instruct:free',
             tone: 'humanized',
             focusMetrics: true,
             backendConnected: false
         };
+        
+        // API base URL - empty string means same domain (for Vercel deployment)
+        const API_BASE_URL = '';
 
         // Load saved data on startup
         document.addEventListener('DOMContentLoaded', () => {
@@ -937,10 +932,8 @@
         async function checkAIStatus() {
             updateAIStatus('checking');
             
-            const backendUrl = settings.backendUrl || 'http://localhost:3001';
-            
             try {
-                const response = await fetch(`${backendUrl}/api/health`, {
+                const response = await fetch(`${API_BASE_URL}/api/health`, {
                     method: 'GET',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -1086,8 +1079,7 @@
         function loadSettings() {
             const saved = localStorage.getItem('resumeBuilderSettings');
             if (saved) {
-                settings = JSON.parse(saved);
-                document.getElementById('backendUrl').value = settings.backendUrl || 'http://localhost:3001';
+                settings = { ...settings, ...JSON.parse(saved) };
                 document.getElementById('writingTone').value = settings.tone || 'humanized';
                 document.getElementById('focusMetrics').checked = settings.focusMetrics !== false;
                 
@@ -1102,7 +1094,6 @@
         function saveSettings() {
             const modelSelect = document.getElementById('aiModel');
             settings = {
-                backendUrl: document.getElementById('backendUrl').value.trim() || 'http://localhost:3001',
                 model: modelSelect.value || settings.model || 'meta-llama/llama-3.1-8b-instruct:free',
                 tone: document.getElementById('writingTone').value,
                 focusMetrics: document.getElementById('focusMetrics').checked,
@@ -1115,7 +1106,6 @@
         }
 
         async function testBackendConnection() {
-            const backendUrl = document.getElementById('backendUrl').value.trim() || 'http://localhost:3001';
             const statusContainer = document.getElementById('backendConnectionStatus');
             const statusContent = document.getElementById('backendStatusContent');
             const testBtn = document.getElementById('testBackendBtn');
@@ -1133,24 +1123,24 @@
             statusContent.innerHTML = `
                 <div class="flex items-center gap-3 text-gray-600">
                     <div class="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full loading-spinner"></div>
-                    <span>Connecting to backend server...</span>
+                    <span>Connecting to API server...</span>
                 </div>
             `;
             
             try {
                 // First check health endpoint
-                const healthResponse = await fetch(`${backendUrl}/api/health`);
+                const healthResponse = await fetch(`${API_BASE_URL}/api/health`);
                 if (!healthResponse.ok) {
-                    throw new Error('Backend server is not responding');
+                    throw new Error('API server is not responding');
                 }
                 
                 const healthData = await healthResponse.json();
                 if (!healthData.apiConfigured) {
-                    throw new Error('Backend server is running but API key is not configured. Check your .env file.');
+                    throw new Error('API server is running but OpenRouter API key is not configured in Vercel environment variables.');
                 }
                 
                 // Fetch available models from backend
-                const modelsResponse = await fetch(`${backendUrl}/api/models`);
+                const modelsResponse = await fetch(`${API_BASE_URL}/api/models`);
                 
                 if (!modelsResponse.ok) {
                     const error = await modelsResponse.json();
@@ -1163,7 +1153,6 @@
                 // Store models in settings
                 settings.availableModels = models;
                 settings.backendConnected = true;
-                settings.backendUrl = backendUrl;
                 
                 // Populate dropdown
                 populateModelsDropdown(settings.availableModels, settings.model);
@@ -1176,22 +1165,22 @@
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
-                            <span class="font-semibold">Backend Connected!</span>
+                            <span class="font-semibold">API Connected!</span>
                         </div>
                         <p class="text-sm text-green-600">Server is running with ${modelsData.totalCount || models.length} available models. ${models.filter(m => m.isFree).length} free models loaded.</p>
-                        <p class="text-xs text-green-500 mt-1">🔒 Your API key is securely stored on the server.</p>
+                        <p class="text-xs text-green-500 mt-1">🔒 Your API key is securely stored in Vercel environment variables.</p>
                     </div>
                 `;
                 
                 // Auto-save settings
                 saveSettings();
-                showToast('Backend connected! AI features are ready.');
+                showToast('API connected! AI features are ready.');
                 
                 // Update AI status indicator
                 updateAIStatus('ready');
                 
             } catch (error) {
-                console.error('Backend Connection Error:', error);
+                console.error('API Connection Error:', error);
                 settings.backendConnected = false;
                 
                 statusContent.innerHTML = `
@@ -1205,13 +1194,13 @@
                         <p class="text-sm text-red-600">${error.message}</p>
                         <div class="text-xs text-red-500 mt-2 space-y-1">
                             <p><strong>Troubleshooting:</strong></p>
-                            <p>1. Make sure the backend server is running: <code class="bg-red-100 px-1 rounded">npm start</code></p>
-                            <p>2. Check that OPENROUTER_API_KEY is set in your .env file</p>
-                            <p>3. Verify the backend URL is correct</p>
+                            <p>1. Make sure the app is deployed to Vercel</p>
+                            <p>2. Check that OPENROUTER_API_KEY is set in Vercel Environment Variables</p>
+                            <p>3. Redeploy after adding the environment variable</p>
                         </div>
                     </div>
                 `;
-                showToast('Backend connection failed.');
+                showToast('API connection failed.');
                 
                 // Update AI status indicator
                 updateAIStatus('not-ready');
@@ -2115,19 +2104,18 @@ OUTPUT: Only the 2-3 sentence description (40-60 words), nothing else.`;
 
         // AI Integration with Backend Proxy (Secure)
         async function callOpenRouter(systemMessage, userMessage, maxRetries = 1) {
-            if (!settings.backendConnected && !settings.backendUrl) {
-                showToast('Please connect to the backend server in Settings');
+            if (!settings.backendConnected) {
+                showToast('Please test the API connection in Settings first');
                 updateAIStatus('not-ready');
                 switchTab('settings');
                 return null;
             }
 
-            const backendUrl = settings.backendUrl || 'http://localhost:3001';
             const modelToUse = settings.model || 'meta-llama/llama-3.1-8b-instruct:free';
 
             for (let attempt = 0; attempt <= maxRetries; attempt++) {
                 try {
-                    const response = await fetch(`${backendUrl}/api/chat`, {
+                    const response = await fetch(`${API_BASE_URL}/api/chat`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
